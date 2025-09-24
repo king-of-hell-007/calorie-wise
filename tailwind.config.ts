@@ -58,6 +58,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Custom design system colors
+        sectionPrimary: "hsl(var(--section-primary))",
+        sectionSecondary: "hsl(var(--section-secondary))",
+        sectionAccent: "var(--section-accent)",
+        ctaPrimary: "hsl(var(--cta-primary))",
+        ctaPrimaryHover: "hsl(var(--cta-primary-hover))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -91,15 +97,18 @@ export default {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-hero": "var(--gradient-hero)",
         "gradient-card": "var(--gradient-card)",
+        "gradient-cta": "var(--gradient-cta)",
       },
       boxShadow: {
         "soft": "var(--shadow-soft)",
         "medium": "var(--shadow-medium)",  
         "strong": "var(--shadow-strong)",
+        "glow": "var(--shadow-glow)",
       },
       transitionTimingFunction: {
         "smooth": "var(--transition-smooth)",
         "bounce": "var(--transition-bounce)",
+        "spring": "var(--transition-spring)",
       },
     },
   },

@@ -2,63 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CalorieWise Design System - Health & Nutrition Theme
+/* CalorieWise Design System - Bold & Action-Focused
 All colors MUST be HSL for consistency.
 */
 
 @layer base {
   :root {
     /* Core background and text */
-    --background: 0 0% 98%;
-    --foreground: 160 15% 15%;
+    --background: 0 0% 99%;
+    --foreground: 160 20% 12%;
 
     /* Card components */
     --card: 0 0% 100%;
-    --card-foreground: 160 15% 15%;
+    --card-foreground: 160 20% 12%;
 
     /* Popover components */
     --popover: 0 0% 100%;
-    --popover-foreground: 160 15% 15%;
+    --popover-foreground: 160 20% 12%;
 
-    /* Primary - Fresh nutrition green */
-    --primary: 142 76% 36%;
-    --primary-foreground: 0 0% 98%;
-    --primary-hover: 142 76% 42%;
+    /* Primary - Bold vibrant green */
+    --primary: 142 85% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 142 85% 48%;
 
-    /* Secondary - Light green accent */
-    --secondary: 120 20% 95%;
-    --secondary-foreground: 160 15% 15%;
+    /* Secondary - Rich contrast */
+    --secondary: 160 15% 95%;
+    --secondary-foreground: 160 20% 12%;
 
     /* Muted states */
     --muted: 120 15% 96%;
-    --muted-foreground: 160 10% 45%;
+    --muted-foreground: 160 15% 40%;
 
-    /* Accent - Emerald highlight */
-    --accent: 158 64% 52%;
-    --accent-foreground: 0 0% 98%;
+    /* Accent - Electric emerald */
+    --accent: 158 75% 55%;
+    --accent-foreground: 0 0% 100%;
 
     /* Destructive states */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
     /* Borders and inputs */
-    --border: 120 15% 88%;
+    --border: 120 20% 85%;
     --input: 120 15% 92%;
-    --ring: 142 76% 36%;
+    --ring: 142 85% 42%;
 
-    /* Custom gradients for CalorieWise */
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(158 64% 52%));
-    --gradient-hero: linear-gradient(180deg, hsl(142 76% 36% / 0.05), hsl(158 64% 52% / 0.1));
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(120 20% 98%));
+    /* Bold CTA colors */
+    --cta-primary: 142 85% 42%;
+    --cta-primary-hover: 142 85% 48%;
+    --cta-glow: 142 85% 42% / 0.3;
 
-    /* Custom shadows */
-    --shadow-soft: 0 4px 20px hsl(142 76% 36% / 0.08);
-    --shadow-medium: 0 8px 30px hsl(142 76% 36% / 0.12);
-    --shadow-strong: 0 12px 40px hsl(142 76% 36% / 0.16);
+    /* Section backgrounds */
+    --section-primary: 0 0% 99%;
+    --section-secondary: 142 30% 97%;
+    --section-accent: linear-gradient(135deg, hsl(142 85% 42% / 0.03), hsl(158 75% 55% / 0.05));
+
+    /* Custom gradients - More vibrant */
+    --gradient-primary: linear-gradient(135deg, hsl(142 85% 42%), hsl(158 75% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 85% 42% / 0.08), hsl(158 75% 55% / 0.12));
+    --gradient-cta: linear-gradient(135deg, hsl(142 85% 42%), hsl(142 85% 48%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(142 20% 98%));
+
+    /* Enhanced shadows */
+    --shadow-soft: 0 4px 20px hsl(142 85% 42% / 0.1);
+    --shadow-medium: 0 8px 30px hsl(142 85% 42% / 0.15);
+    --shadow-strong: 0 16px 50px hsl(142 85% 42% / 0.2);
+    --shadow-glow: 0 0 40px hsl(var(--cta-glow));
 
     /* Animation variables */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --radius: 0.75rem;
 
@@ -81,52 +94,64 @@ All colors MUST be HSL for consistency.
 
   .dark {
     /* Core background and text */
-    --background: 160 15% 8%;
-    --foreground: 120 15% 95%;
+    --background: 160 20% 7%;
+    --foreground: 120 15% 96%;
 
     /* Card components */
-    --card: 160 15% 10%;
-    --card-foreground: 120 15% 95%;
+    --card: 160 15% 9%;
+    --card-foreground: 120 15% 96%;
 
     /* Popover components */
-    --popover: 160 15% 10%;
-    --popover-foreground: 120 15% 95%;
+    --popover: 160 15% 9%;
+    --popover-foreground: 120 15% 96%;
 
-    /* Primary - Brighter green for dark mode */
-    --primary: 142 76% 45%;
-    --primary-foreground: 160 15% 8%;
-    --primary-hover: 142 76% 52%;
+    /* Primary - Electric green for dark mode */
+    --primary: 142 85% 50%;
+    --primary-foreground: 160 20% 7%;
+    --primary-hover: 142 85% 56%;
 
-    /* Secondary - Dark green accent */
-    --secondary: 160 15% 15%;
-    --secondary-foreground: 120 15% 95%;
+    /* Secondary - Rich dark accent */
+    --secondary: 160 15% 12%;
+    --secondary-foreground: 120 15% 96%;
 
     /* Muted states */
-    --muted: 160 10% 12%;
-    --muted-foreground: 120 10% 60%;
+    --muted: 160 10% 11%;
+    --muted-foreground: 120 10% 65%;
 
-    /* Accent - Brighter emerald */
-    --accent: 158 64% 58%;
-    --accent-foreground: 160 15% 8%;
+    /* Accent - Bright emerald */
+    --accent: 158 75% 62%;
+    --accent-foreground: 160 20% 7%;
 
     /* Destructive states */
     --destructive: 0 84% 65%;
     --destructive-foreground: 0 0% 98%;
 
     /* Borders and inputs */
-    --border: 160 10% 20%;
-    --input: 160 10% 18%;
-    --ring: 142 76% 45%;
+    --border: 160 15% 18%;
+    --input: 160 15% 15%;
+    --ring: 142 85% 50%;
 
-    /* Custom gradients for dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 45%), hsl(158 64% 58%));
-    --gradient-hero: linear-gradient(180deg, hsl(142 76% 45% / 0.05), hsl(158 64% 58% / 0.08));
-    --gradient-card: linear-gradient(135deg, hsl(160 15% 10%), hsl(160 10% 12%));
+    /* Bold CTA colors for dark */
+    --cta-primary: 142 85% 50%;
+    --cta-primary-hover: 142 85% 56%;
+    --cta-glow: 142 85% 50% / 0.4;
 
-    /* Custom shadows for dark mode */
-    --shadow-soft: 0 4px 20px hsl(142 76% 45% / 0.15);
-    --shadow-medium: 0 8px 30px hsl(142 76% 45% / 0.2);
-    --shadow-strong: 0 12px 40px hsl(142 76% 45% / 0.25);
+    /* Section backgrounds for dark */
+    --section-primary: 160 20% 7%;
+    --section-secondary: 160 15% 9%;
+    --section-accent: linear-gradient(135deg, hsl(142 85% 50% / 0.05), hsl(158 75% 62% / 0.08));
+
+    /* Enhanced gradients for dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(142 85% 50%), hsl(158 75% 62%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 85% 50% / 0.1), hsl(158 75% 62% / 0.15));
+    --gradient-cta: linear-gradient(135deg, hsl(142 85% 50%), hsl(142 85% 56%));
+    --gradient-card: linear-gradient(135deg, hsl(160 15% 9%), hsl(160 10% 11%));
+
+    /* Enhanced shadows for dark mode */
+    --shadow-soft: 0 4px 20px hsl(142 85% 50% / 0.2);
+    --shadow-medium: 0 8px 30px hsl(142 85% 50% / 0.25);
+    --shadow-strong: 0 16px 50px hsl(142 85% 50% / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--cta-glow));
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
