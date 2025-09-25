@@ -5,49 +5,56 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { NutritionResults } from '@/components/NutritionResults';
 import { Sparkles, Smartphone, Zap, Camera } from 'lucide-react';
 import heroImage from '@/assets/hero-nutrition.jpg';
+import { createClient } from '@supabase/supabase-js';
 
-interface NutritionData {
+interface FoodItem {
+  name: string;
+  quantity: string;
+  calories: number;
   protein: number;
   carbs: number;
   fat: number;
-  calories: number;
-  confidence: number;
-  foods: string[];
 }
+
+interface NutritionData {
+  output: {
+    status: string;
+    food: FoodItem[];
+    total: {
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+  };
+}
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
 
-  const simulateNutritionAnalysis = async (imageFile: File): Promise<NutritionData> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock nutrition data - replace with actual API call
-    return {
-      protein: Math.floor(Math.random() * 30) + 15,
-      carbs: Math.floor(Math.random() * 40) + 20,
-      fat: Math.floor(Math.random() * 20) + 10,
-      calories: Math.floor(Math.random() * 400) + 300,
-      confidence: 0.85 + Math.random() * 0.1,
-      foods: ['Chicken breast', 'Rice', 'Broccoli', 'Olive oil']
-    };
-  };
-
   const handleAnalyze = async (imageFile: File) => {
     setIsAnalyzing(true);
     try {
-      // Replace this with actual API call
-      // const formData = new FormData();
-      // formData.append('image', imageFile);
-      // const response = await fetch('/api/analyze-nutrition', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // const data = await response.json();
+      const formData = new FormData();
+      formData.append('image', imageFile);
       
-      const data = await simulateNutritionAnalysis(imageFile);
-      setNutritionData(data);
+      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
+        body: formData
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to analyze nutrition");
+      }
+
+      if (data && data.length > 0) {
+        setNutritionData(data[0]);
+      }
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
