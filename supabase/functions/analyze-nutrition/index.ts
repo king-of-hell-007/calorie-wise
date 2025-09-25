@@ -27,7 +27,7 @@ serve(async (req) => {
     webhookFormData.append('image', image)
 
     // Send to the webhook
-    const response = await fetch('http://0.0.0.0:5678/webhook-test/calorie-analysis', {
+    const response = await fetch('http://0.0.0.0:5678/webhook/calorie-analysis', {
       method: 'POST',
       body: webhookFormData,
     })
