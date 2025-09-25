@@ -6,7 +6,6 @@ import { NutritionResults } from '@/components/NutritionResults';
 import { Sparkles, Smartphone, Zap, Camera } from 'lucide-react';
 import heroImage from '@/assets/hero-nutrition.jpg';
 import { createClient } from '@supabase/supabase-js';
-
 interface FoodItem {
   name: string;
   quantity: string;
@@ -15,7 +14,6 @@ interface FoodItem {
   carbs: number;
   fat: number;
 }
-
 interface NutritionData {
   output: {
     status: string;
@@ -28,30 +26,24 @@ interface NutritionData {
     };
   };
 }
-
-const supabase = createClient(
-  'https://txgkydpwdsdaxfzztwyz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4Z2t5ZHB3ZHNkYXhmenp0d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTIyMTUsImV4cCI6MjA3NDM2ODIxNX0.p0akBfNQAKtq-0X0DnyJ671_4D5wLR1gVXltBF2pqJs'
-);
-
+const supabase = createClient('https://txgkydpwdsdaxfzztwyz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4Z2t5ZHB3ZHNkYXhmenp0d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTIyMTUsImV4cCI6MjA3NDM2ODIxNX0.p0akBfNQAKtq-0X0DnyJ671_4D5wLR1gVXltBF2pqJs');
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
-
   const handleAnalyze = async (imageFile: File) => {
     setIsAnalyzing(true);
     try {
       const formData = new FormData();
       formData.append('image', imageFile);
-      
-      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('analyze-nutrition', {
         body: formData
       });
-
       if (error) {
         throw new Error(error.message || "Failed to analyze nutrition");
       }
-
       if (data && data.length > 0) {
         setNutritionData(data[0]);
       }
@@ -61,13 +53,10 @@ const Index = () => {
       setIsAnalyzing(false);
     }
   };
-
   const handleReset = () => {
     setNutritionData(null);
   };
-
-  return (
-    <div className="min-h-screen bg-sectionPrimary">
+  return <div className="min-h-screen bg-sectionPrimary">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-soft">
         <div className="container mx-auto px-4 py-3">
@@ -78,17 +67,14 @@ const Index = () => {
               </div>
               <h1 className="text-2xl font-bold text-foreground">CalorieWise</h1>
             </div>
-            <Button variant="outline" size="sm" className="hidden sm:flex font-semibold hover:bg-primary hover:text-primary-foreground transition-smooth">
-              Get Started
-            </Button>
+            
           </div>
         </div>
       </header>
 
       <main>
         {/* Compact Hero Section with Prominent CTA */}
-        {!nutritionData && (
-          <section className="bg-gradient-hero py-16 lg:py-20">
+        {!nutritionData && <section className="bg-gradient-hero py-16 lg:py-20">
             <div className="container mx-auto px-4">
               <div className="max-w-5xl mx-auto">
                 <div className="grid lg:grid-cols-2 gap-8 items-center">
@@ -106,20 +92,15 @@ const Index = () => {
                     
                     {/* Big Bold CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4">
-                      <Button
-                        size="lg"
-                        className="bg-gradient-cta hover:shadow-glow text-white font-bold text-lg px-8 py-4 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong"
-                        onClick={() => document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' })}
-                      >
+                      <Button size="lg" className="bg-gradient-cta hover:shadow-glow text-white font-bold text-lg px-8 py-4 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong" onClick={() => document.getElementById('upload-section')?.scrollIntoView({
+                    behavior: 'smooth'
+                  })}>
                         <Camera className="w-6 h-6 mr-3" />
                         Start Analyzing Now
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="font-semibold text-lg px-8 py-4 h-auto rounded-xl border-2 hover:bg-primary hover:text-primary-foreground transition-smooth"
-                        onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                      >
+                      <Button variant="outline" size="lg" className="font-semibold text-lg px-8 py-4 h-auto rounded-xl border-2 hover:bg-primary hover:text-primary-foreground transition-smooth" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({
+                    behavior: 'smooth'
+                  })}>
                         How It Works
                       </Button>
                     </div>
@@ -148,11 +129,7 @@ const Index = () => {
 
                   <div className="relative">
                     <div className="relative rounded-3xl overflow-hidden shadow-strong">
-                      <img
-                        src={heroImage}
-                        alt="Fresh healthy meal with nutrition analysis"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={heroImage} alt="Fresh healthy meal with nutrition analysis" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
                     </div>
                     {/* Floating nutrition preview */}
@@ -166,37 +143,29 @@ const Index = () => {
                 </div>
               </div>
             </div>
-          </section>
-        )}
+          </section>}
 
         {/* Upload Section */}
         <section id="upload-section" className="py-12 lg:py-16 bg-sectionSecondary">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto">
-              {nutritionData ? (
-                <NutritionResults data={nutritionData} onReset={handleReset} />
-              ) : (
-                <div className="space-y-8">
-                  {!isAnalyzing && (
-                    <div className="text-center space-y-4">
+              {nutritionData ? <NutritionResults data={nutritionData} onReset={handleReset} /> : <div className="space-y-8">
+                  {!isAnalyzing && <div className="text-center space-y-4">
                       <h2 className="text-4xl font-bold text-foreground">
                         Ready to Analyze?
                       </h2>
                       <p className="text-lg text-muted-foreground max-w-md mx-auto">
                         Upload a photo or capture your meal to get instant nutrition insights
                       </p>
-                    </div>
-                  )}
+                    </div>}
                   <ImageUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </section>
 
         {/* Features - How It Works */}
-        {!nutritionData && !isAnalyzing && (
-          <section id="how-it-works" className="py-16 lg:py-24 bg-sectionPrimary">
+        {!nutritionData && !isAnalyzing && <section id="how-it-works" className="py-16 lg:py-24 bg-sectionPrimary">
             <div className="container mx-auto px-4">
               <div className="max-w-5xl mx-auto">
                 <div className="text-center space-y-6 mb-16">
@@ -209,35 +178,27 @@ const Index = () => {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8">
-                  {[
-                    {
-                      step: '01',
-                      title: 'Capture or Upload',
-                      description: 'Take a photo of your meal or upload from your gallery. Works with any device, anywhere.',
-                      icon: Smartphone,
-                      color: 'from-blue-500 to-cyan-500'
-                    },
-                    {
-                      step: '02',
-                      title: 'AI Analysis',
-                      description: 'Our powerful AI identifies ingredients and calculates precise nutritional values instantly.',
-                      icon: Sparkles,
-                      color: 'from-purple-500 to-pink-500'
-                    },
-                    {
-                      step: '03',
-                      title: 'Get Results',
-                      description: 'Receive detailed macro breakdown with protein, carbs, fat, and total calorie information.',
-                      icon: Zap,
-                      color: 'from-orange-500 to-red-500'
-                    }
-                  ].map((feature, index) => {
-                    const Icon = feature.icon;
-                    return (
-                      <Card 
-                        key={feature.step} 
-                        className="group p-8 text-center space-y-6 shadow-medium hover:shadow-strong transition-all duration-500 hover:-translate-y-2 border-0 bg-gradient-card hover:bg-white"
-                      >
+                  {[{
+                step: '01',
+                title: 'Capture or Upload',
+                description: 'Take a photo of your meal or upload from your gallery. Works with any device, anywhere.',
+                icon: Smartphone,
+                color: 'from-blue-500 to-cyan-500'
+              }, {
+                step: '02',
+                title: 'AI Analysis',
+                description: 'Our powerful AI identifies ingredients and calculates precise nutritional values instantly.',
+                icon: Sparkles,
+                color: 'from-purple-500 to-pink-500'
+              }, {
+                step: '03',
+                title: 'Get Results',
+                description: 'Receive detailed macro breakdown with protein, carbs, fat, and total calorie information.',
+                icon: Zap,
+                color: 'from-orange-500 to-red-500'
+              }].map((feature, index) => {
+                const Icon = feature.icon;
+                return <Card key={feature.step} className="group p-8 text-center space-y-6 shadow-medium hover:shadow-strong transition-all duration-500 hover:-translate-y-2 border-0 bg-gradient-card hover:bg-white">
                         <div className="relative">
                           <div className={`w-20 h-20 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mx-auto shadow-medium group-hover:shadow-strong transition-all duration-300 group-hover:scale-110`}>
                             <Icon className="w-10 h-10 text-white" />
@@ -254,26 +215,22 @@ const Index = () => {
                             {feature.description}
                           </p>
                         </div>
-                      </Card>
-                    );
-                  })}
+                      </Card>;
+              })}
                 </div>
 
                 {/* CTA after features */}
                 <div className="text-center mt-16">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-cta hover:shadow-glow text-white font-bold text-xl px-12 py-6 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong"
-                    onClick={() => document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' })}
-                  >
+                  <Button size="lg" className="bg-gradient-cta hover:shadow-glow text-white font-bold text-xl px-12 py-6 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong" onClick={() => document.getElementById('upload-section')?.scrollIntoView({
+                behavior: 'smooth'
+              })}>
                     <Sparkles className="w-6 h-6 mr-3" />
                     Try It Now - It's Free!
                   </Button>
                 </div>
               </div>
             </div>
-          </section>
-        )}
+          </section>}
       </main>
 
       {/* Footer */}
@@ -297,8 +254,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
