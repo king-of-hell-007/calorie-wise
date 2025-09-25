@@ -30,8 +30,8 @@ interface NutritionData {
 }
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  'https://txgkydpwdsdaxfzztwyz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4Z2t5ZHB3ZHNkYXhmenp0d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTIyMTUsImV4cCI6MjA3NDM2ODIxNX0.p0akBfNQAKtq-0X0DnyJ671_4D5wLR1gVXltBF2pqJs'
 );
 
 const Index = () => {
