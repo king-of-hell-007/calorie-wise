@@ -44,8 +44,8 @@ const Index = () => {
       if (error) {
         throw new Error(error.message || "Failed to analyze nutrition");
       }
-      if (data && data.length > 0) {
-        setNutritionData(data[0]);
+      if (data) {
+        setNutritionData(data);
       }
     } catch (error) {
       console.error('Analysis failed:', error);
