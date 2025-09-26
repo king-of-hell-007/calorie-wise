@@ -38,8 +38,11 @@ serve(async (req) => {
 
     const data = await response.json()
     
+    // Extract the first element from the array response
+    const responseData = Array.isArray(data) ? data[0] : data
+    
     return new Response(
-      JSON.stringify(data), 
+      JSON.stringify(responseData), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
