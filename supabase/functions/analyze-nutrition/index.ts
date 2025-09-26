@@ -27,13 +27,18 @@ serve(async (req) => {
     webhookFormData.append('image', image)
 
     // Send to the webhook
+    console.log('Calling webhook:', 'http://34.121.71.147:5678/webhook/Calorie-analysis')
     const response = await fetch('http://34.121.71.147:5678/webhook/Calorie-analysis', {
-      method: 'POST',
+      method: 'POST',  
       body: webhookFormData,
     })
 
+    console.log('Webhook response status:', response.status)
+    
     if (!response.ok) {
-      throw new Error(`Webhook failed with status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Webhook error response:', errorText)
+      throw new Error(`Webhook failed with status: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
