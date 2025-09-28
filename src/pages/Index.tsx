@@ -5,6 +5,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { NutritionResults } from '@/components/NutritionResults';
 import { Sparkles, Smartphone, Zap, Camera } from 'lucide-react';
 import heroImage from '@/assets/hero-nutrition.jpg';
+import calorieWiseLogo from '@/assets/caloriewise-logo.png';
 import { createClient } from '@supabase/supabase-js';
 interface FoodItem {
   name: string;
@@ -62,8 +63,8 @@ const Index = () => {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-cta rounded-xl flex items-center justify-center shadow-medium">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                <img src={calorieWiseLogo} alt="CalorieWise Logo" className="w-10 h-10 object-contain" />
               </div>
               <h1 className="text-2xl font-bold text-foreground">CalorieWise</h1>
             </div>
@@ -233,8 +234,8 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center space-y-6">
             <div className="flex items-center justify-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-cta rounded-xl flex items-center justify-center shadow-medium">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                <img src={calorieWiseLogo} alt="CalorieWise Logo" className="w-10 h-10 object-contain" />
               </div>
               <span className="text-2xl font-bold text-foreground">CalorieWise</span>
             </div>
