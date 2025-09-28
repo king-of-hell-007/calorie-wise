@@ -106,12 +106,7 @@ const Index = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-6 pt-4">
-                      <div className="flex items-center space-x-3 text-base font-medium">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Smartphone className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="text-foreground">Mobile-first</span>
-                      </div>
+                      
                       <div className="flex items-center space-x-3 text-base font-medium">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                           <Zap className="w-4 h-4 text-primary" />
