@@ -13,16 +13,16 @@ interface FoodItem {
 }
 
 interface NutritionData {
-  output: {
-    status: string;
-    food: FoodItem[];
-    total: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
+  status: string;
+  food: FoodItem[];
+  total: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
   };
+  suggestions?: Array<{ reason: string; replacement: string }>;
+  flags?: string[];
 }
 
 interface NutritionResultsProps {
@@ -31,8 +31,7 @@ interface NutritionResultsProps {
 }
 
 export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
-  const { output } = data;
-  const { food, total } = output;
+  const { food, total, status } = data;
   const { protein, carbs, fat, calories } = total;
 
   const macros = [
@@ -75,7 +74,7 @@ export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
         <div className="text-right">
           <div className="text-sm font-medium text-muted-foreground">Status</div>
           <div className="text-lg font-bold text-primary capitalize">
-            {output.status}
+            {status}
           </div>
         </div>
       </div>

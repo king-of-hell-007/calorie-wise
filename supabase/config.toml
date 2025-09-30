@@ -1,1 +1,4 @@
 project_id = "txgkydpwdsdaxfzztwyz"
+
+[functions.analyze-nutrition-gemini]
+verify_jwt = false

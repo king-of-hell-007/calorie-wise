@@ -6,7 +6,8 @@ import { NutritionResults } from '@/components/NutritionResults';
 import { Sparkles, Smartphone, Zap, Camera } from 'lucide-react';
 import heroImage from '@/assets/hero-nutrition.jpg';
 import calorieWiseLogo from '@/assets/caloriewise-logo.png';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 interface FoodItem {
   name: string;
   quantity: string;
@@ -16,18 +17,17 @@ interface FoodItem {
   fat: number;
 }
 interface NutritionData {
-  output: {
-    status: string;
-    food: FoodItem[];
-    total: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
+  status: string;
+  food: FoodItem[];
+  total: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
   };
+  suggestions?: Array<{ reason: string; replacement: string }>;
+  flags?: string[];
 }
-const supabase = createClient('https://txgkydpwdsdaxfzztwyz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4Z2t5ZHB3ZHNkYXhmenp0d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTIyMTUsImV4cCI6MjA3NDM2ODIxNX0.p0akBfNQAKtq-0X0DnyJ671_4D5wLR1gVXltBF2pqJs');
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
@@ -36,20 +36,26 @@ const Index = () => {
     try {
       const formData = new FormData();
       formData.append('image', imageFile);
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('analyze-nutrition', {
+      
+      const { data, error } = await supabase.functions.invoke('analyze-nutrition-gemini', {
         body: formData
       });
+
       if (error) {
-        throw new Error(error.message || "Failed to analyze nutrition");
+        console.error('Function invocation error:', error);
+        toast.error(error.message || 'Failed to analyze nutrition');
+        return;
       }
-      if (data) {
+
+      if (data && data.status === 'success') {
         setNutritionData(data);
+        toast.success('Analysis complete!');
+      } else {
+        toast.error(data?.error || 'Analysis failed');
       }
     } catch (error) {
       console.error('Analysis failed:', error);
+      toast.error('Failed to analyze nutrition. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -242,10 +248,13 @@ const Index = () => {
             <p className="text-lg text-muted-foreground max-w-md mx-auto">
               Making nutrition tracking simple, fast, and accessible for everyone.
             </p>
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border space-y-2">
               <p className="text-sm text-muted-foreground">
                 Built with AI precision for modern nutrition tracking
               </p>
+              <a href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors inline-block">
+                Admin Panel
+              </a>
             </div>
           </div>
         </div>
