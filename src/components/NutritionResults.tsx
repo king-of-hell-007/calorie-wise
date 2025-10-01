@@ -28,6 +28,7 @@ interface NutritionData {
 interface NutritionResultsProps {
   data: NutritionData;
   onReset: () => void;
+  imageUrl?: string;
 }
 
 export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {

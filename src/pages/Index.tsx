@@ -1,264 +1,110 @@
-import { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ImageUpload } from '@/components/ImageUpload';
-import { NutritionResults } from '@/components/NutritionResults';
-import { Sparkles, Smartphone, Zap, Camera } from 'lucide-react';
-import heroImage from '@/assets/hero-nutrition.jpg';
-import calorieWiseLogo from '@/assets/caloriewise-logo.png';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-interface FoodItem {
-  name: string;
-  quantity: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
-interface NutritionData {
-  status: string;
-  food: FoodItem[];
-  total: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  };
-  suggestions?: Array<{ reason: string; replacement: string }>;
-  flags?: string[];
-}
-const Index = () => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
-  const handleAnalyze = async (imageFile: File) => {
-    setIsAnalyzing(true);
-    try {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      
-      const { data, error } = await supabase.functions.invoke('analyze-nutrition-gemini', {
-        body: formData
-      });
+import heroImage from '@/assets/hero-nutrition.jpg';
+import logo from '@/assets/caloriewise-logo.png';
+import { ArrowRight, Sparkles, TrendingUp, Award } from 'lucide-react';
+export default function Index() {
+  const navigate = useNavigate();
 
-      if (error) {
-        console.error('Function invocation error:', error);
-        toast.error(error.message || 'Failed to analyze nutrition');
-        return;
-      }
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-      if (data && data.status === 'success') {
-        setNutritionData(data);
-        toast.success('Analysis complete!');
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.onboarding_completed) {
+        navigate('/dashboard');
       } else {
-        toast.error(data?.error || 'Analysis failed');
+        navigate('/onboarding');
       }
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      toast.error('Failed to analyze nutrition. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
     }
   };
-  const handleReset = () => {
-    setNutritionData(null);
-  };
-  return <div className="min-h-screen bg-sectionPrimary">
-      {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-soft">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-                <img src={calorieWiseLogo} alt="CalorieWise Logo" className="w-10 h-10 object-contain" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground">CalorieWise</h1>
-            </div>
-            
+
+  return (
+    <div className="min-h-screen bg-gradient-hero">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-10"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        <div className="relative container mx-auto px-4 py-12 sm:py-20">
+          <div className="text-center max-w-3xl mx-auto">
+            <img 
+              src={logo} 
+              alt="CalorieWise" 
+              className="w-28 sm:w-36 h-auto mx-auto mb-6 drop-shadow-xl"
+            />
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 bg-clip-text text-transparent bg-gradient-primary">
+              Your AI Nutrition Companion
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed px-4">
+              Snap, analyze, and track your meals with AI-powered precision. 
+              Achieve your health goals with personalized nutrition insights.
+            </p>
+            <Button
+              onClick={() => navigate('/onboarding')}
+              size="lg"
+              className="bg-gradient-cta text-white text-lg px-8 py-6 h-auto rounded-xl shadow-strong hover:shadow-glow transition-all duration-300"
+            >
+              Get Started
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main>
-        {/* Compact Hero Section with Prominent CTA */}
-        {!nutritionData && <section className="bg-gradient-hero py-16 lg:py-20">
-            <div className="container mx-auto px-4">
-              <div className="max-w-5xl mx-auto">
-                <div className="grid lg:grid-cols-2 gap-8 items-center">
-                  <div className="space-y-8">
-                    <div className="space-y-6">
-                      <h1 className="text-5xl lg:text-6xl font-black text-foreground leading-tight">
-                        Instant 
-                        <span className="bg-gradient-primary bg-clip-text text-transparent block"> Nutrition</span>
-                        <span className="text-foreground">Analysis</span>
-                      </h1>
-                      <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-                        Snap a photo, get detailed macros in seconds. AI-powered precision for smarter nutrition tracking.
-                      </p>
-                    </div>
-                    
-                    {/* Big Bold CTA Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <Button size="lg" className="bg-gradient-cta hover:shadow-glow text-white font-bold text-lg px-8 py-4 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong" onClick={() => document.getElementById('upload-section')?.scrollIntoView({
-                    behavior: 'smooth'
-                  })}>
-                        <Camera className="w-6 h-6 mr-3" />
-                        Start Analyzing Now
-                      </Button>
-                      <Button variant="outline" size="lg" className="font-semibold text-lg px-8 py-4 h-auto rounded-xl border-2 hover:bg-primary hover:text-primary-foreground transition-smooth" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({
-                    behavior: 'smooth'
-                  })}>
-                        How It Works
-                      </Button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-6 pt-4">
-                      
-                      <div className="flex items-center space-x-3 text-base font-medium">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Zap className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="text-foreground">Instant results</span>
-                      </div>
-                      <div className="flex items-center space-x-3 text-base font-medium">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="text-foreground">AI-powered</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="relative rounded-3xl overflow-hidden shadow-strong">
-                      <img src={heroImage} alt="Fresh healthy meal with nutrition analysis" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-primary opacity-5"></div>
-                    </div>
-                    {/* Floating nutrition preview */}
-                    <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-4 shadow-strong border border-border">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">524</div>
-                        <div className="text-sm text-muted-foreground">calories</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>}
-
-        {/* Upload Section */}
-        <section id="upload-section" className="py-12 lg:py-16 bg-sectionSecondary">
-          <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto">
-              {nutritionData ? <NutritionResults data={nutritionData} onReset={handleReset} /> : <div className="space-y-8">
-                  {!isAnalyzing && <div className="text-center space-y-4">
-                      <h2 className="text-4xl font-bold text-foreground">
-                        Ready to Analyze?
-                      </h2>
-                      <p className="text-lg text-muted-foreground max-w-md mx-auto">
-                        Upload a photo or capture your meal to get instant nutrition insights
-                      </p>
-                    </div>}
-                  <ImageUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
-                </div>}
-            </div>
-          </div>
-        </section>
-
-        {/* Features - How It Works */}
-        {!nutritionData && !isAnalyzing && <section id="how-it-works" className="py-16 lg:py-24 bg-sectionPrimary">
-            <div className="container mx-auto px-4">
-              <div className="max-w-5xl mx-auto">
-                <div className="text-center space-y-6 mb-16">
-                  <h2 className="text-4xl lg:text-5xl font-bold text-foreground">
-                    How It <span className="bg-gradient-primary bg-clip-text text-transparent">Works</span>
-                  </h2>
-                  <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                    Our advanced AI analyzes your food photos to deliver precise nutritional breakdowns in seconds
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-8">
-                  {[{
-                step: '01',
-                title: 'Capture or Upload',
-                description: 'Take a photo of your meal or upload from your gallery. Works with any device, anywhere.',
-                icon: Smartphone,
-                color: 'from-blue-500 to-cyan-500'
-              }, {
-                step: '02',
-                title: 'AI Analysis',
-                description: 'Our powerful AI identifies ingredients and calculates precise nutritional values instantly.',
-                icon: Sparkles,
-                color: 'from-purple-500 to-pink-500'
-              }, {
-                step: '03',
-                title: 'Get Results',
-                description: 'Receive detailed macro breakdown with protein, carbs, fat, and total calorie information.',
-                icon: Zap,
-                color: 'from-orange-500 to-red-500'
-              }].map((feature, index) => {
-                const Icon = feature.icon;
-                return <Card key={feature.step} className="group p-8 text-center space-y-6 shadow-medium hover:shadow-strong transition-all duration-500 hover:-translate-y-2 border-0 bg-gradient-card hover:bg-white">
-                        <div className="relative">
-                          <div className={`w-20 h-20 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mx-auto shadow-medium group-hover:shadow-strong transition-all duration-300 group-hover:scale-110`}>
-                            <Icon className="w-10 h-10 text-white" />
-                          </div>
-                          <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-lg shadow-medium">
-                            {feature.step}
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
-                            {feature.title}
-                          </h3>
-                          <p className="text-muted-foreground leading-relaxed text-base">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </Card>;
-              })}
-                </div>
-
-                {/* CTA after features */}
-                <div className="text-center mt-16">
-                  <Button size="lg" className="bg-gradient-cta hover:shadow-glow text-white font-bold text-xl px-12 py-6 h-auto rounded-xl transition-all duration-300 hover:scale-105 shadow-strong" onClick={() => document.getElementById('upload-section')?.scrollIntoView({
-                behavior: 'smooth'
-              })}>
-                    <Sparkles className="w-6 h-6 mr-3" />
-                    Try It Now - It's Free!
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>}
-      </main>
+      {/* Features */}
+      <div className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <Card className="shadow-strong border-primary/20">
+            <CardContent className="pt-6 text-center">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-xl font-bold mb-2">AI Analysis</h3>
+              <p className="text-muted-foreground">
+                Instant nutrition breakdown with Gemini AI technology
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-strong border-accent/20">
+            <CardContent className="pt-6 text-center">
+              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-accent" />
+              <h3 className="text-xl font-bold mb-2">Track Progress</h3>
+              <p className="text-muted-foreground">
+                Monitor your nutrition journey with detailed charts and insights
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-strong border-orange-600/20">
+            <CardContent className="pt-6 text-center">
+              <Award className="w-12 h-12 mx-auto mb-4 text-orange-600" />
+              <h3 className="text-xl font-bold mb-2">Earn Rewards</h3>
+              <p className="text-muted-foreground">
+                Build streaks, unlock badges, and stay motivated
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Footer */}
-      <footer className="bg-sectionSecondary border-t border-border py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-6">
-            <div className="flex items-center justify-center space-x-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-                <img src={calorieWiseLogo} alt="CalorieWise Logo" className="w-10 h-10 object-contain" />
-              </div>
-              <span className="text-2xl font-bold text-foreground">CalorieWise</span>
-            </div>
-            <p className="text-lg text-muted-foreground max-w-md mx-auto">
-              Making nutrition tracking simple, fast, and accessible for everyone.
-            </p>
-            <div className="pt-4 border-t border-border space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Built with AI precision for modern nutrition tracking
-              </p>
-              <a href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors inline-block">
-                Admin Panel
-              </a>
-            </div>
-          </div>
+      <footer className="border-t bg-card/50 backdrop-blur-sm mt-12 py-6">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            © 2025 CalorieWise. Powered by AI nutrition analysis.
+          </p>
         </div>
       </footer>
-    </div>;
-};
-export default Index;
+    </div>
+  );
+}
