@@ -27,6 +27,8 @@ export default function Index() {
       } else {
         navigate('/onboarding');
       }
+    } else {
+      // Not authenticated, stay on landing page
     }
   };
 
@@ -53,7 +55,7 @@ export default function Index() {
               Achieve your health goals with personalized nutrition insights.
             </p>
             <Button
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/auth')}
               size="lg"
               className="bg-gradient-cta text-white text-lg px-8 py-6 h-auto rounded-xl shadow-strong hover:shadow-glow transition-all duration-300"
             >

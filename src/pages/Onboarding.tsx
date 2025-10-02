@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,17 @@ export default function Onboarding() {
   const [suggestedGoal, setSuggestedGoal] = useState<string>('');
 
   const totalSteps = 7;
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth');
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const calculateBMI = (weight: number, height: number) => {
     const heightM = height / 100;
