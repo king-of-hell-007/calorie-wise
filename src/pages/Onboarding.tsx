@@ -106,31 +106,33 @@ export default function Onboarding() {
       const carbCalories = targetCalories - (proteinG * 4 + fatG * 9);
       const carbG = Math.round(carbCalories / 4);
 
+      const profileData = {
+        id: user.id,
+        email: user.email,
+        age: data.age,
+        sex: data.sex,
+        height_cm: data.height_cm,
+        weight_kg: data.weight_kg,
+        bmi: calculatedBMI,
+        bmr: Math.round(bmr),
+        tdee,
+        target_calories: targetCalories,
+        protein_g: proteinG,
+        carbs_g: carbG,
+        fat_g: fatG,
+        baseline_activity: data.baseline_activity,
+        exercise_frequency: data.exercise_frequency,
+        exercise_duration: data.exercise_duration,
+        goal: data.goal,
+        goal_custom_text: data.goal_custom_text,
+        dietary_preferences: data.dietary_preferences,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          age: data.age,
-          sex: data.sex,
-          height_cm: data.height_cm,
-          weight_kg: data.weight_kg,
-          bmi: calculatedBMI,
-          bmr: Math.round(bmr),
-          tdee,
-          target_calories: targetCalories,
-          protein_g: proteinG,
-          carbs_g: carbG,
-          fat_g: fatG,
-          baseline_activity: data.baseline_activity,
-          exercise_frequency: data.exercise_frequency,
-          exercise_duration: data.exercise_duration,
-          goal: data.goal,
-          goal_custom_text: data.goal_custom_text,
-          dietary_preferences: data.dietary_preferences,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(profileData as any, { onConflict: 'id' });
 
       if (error) throw error;
 
