@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 import { Award, Lock } from 'lucide-react';
 
 type Badge = {
@@ -28,26 +27,20 @@ export default function Badges() {
 
   const loadBadges = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
 
       // Load all available badges
-      const { data: badges, error: badgesError } = await supabase
-        .from('badges')
-        .select('*')
-        .order('points', { ascending: true });
-
-      if (badgesError) throw badgesError;
-      setAllBadges(badges || []);
+      const resAll = await fetch('src/api/badges.php?action=all');
+      const jsonAll = await resAll.json();
+      if (!resAll.ok) throw new Error(jsonAll.error || 'Failed to load badges');
+      setAllBadges(jsonAll.badges || []);
 
       // Load user's unlocked badges
-      const { data: userBadgesData, error: userBadgesError } = await supabase
-        .from('user_badges')
-        .select('badge_id, unlocked_at')
-        .eq('user_id', user.id);
-
-      if (userBadgesError) throw userBadgesError;
-      setUserBadges(userBadgesData || []);
+      const resMine = await fetch('src/api/badges.php?action=mine', { headers: { Authorization: `Bearer ${token}` } });
+      const jsonMine = await resMine.json();
+      if (!resMine.ok) throw new Error(jsonMine.error || 'Failed to load user badges');
+      setUserBadges(jsonMine.user_badges || []);
     } catch (error) {
       console.error('Error loading badges:', error);
     } finally {

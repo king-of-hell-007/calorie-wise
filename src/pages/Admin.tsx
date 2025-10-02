@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,12 +30,9 @@ const Admin = () => {
 
   const fetchApiKeys = async () => {
     try {
-      const { data, error } = await supabase
-        .from('admin_api_keys')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const res = await fetch('src/api/admin.php?action=keys');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load API keys');
       setApiKeys(data || []);
     } catch (error: any) {
       console.error('Error fetching API keys:', error);
@@ -52,16 +48,17 @@ const Admin = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('admin_api_keys')
-        .insert({
+      const res = await fetch('src/api/admin.php?action=add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           key_name: newKeyName.trim(),
           key_value: newKeyValue.trim(),
-          provider: 'gemini',
-          is_active: true
-        });
-
-      if (error) throw error;
+          provider: 'gemini'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add key');
 
       toast.success('API key added successfully');
       setNewKeyName('');
@@ -77,12 +74,9 @@ const Admin = () => {
 
   const toggleKeyStatus = async (keyId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('admin_api_keys')
-        .update({ is_active: !currentStatus })
-        .eq('id', keyId);
-
-      if (error) throw error;
+      const res = await fetch(`src/api/admin.php?action=toggle&id=${encodeURIComponent(keyId)}&is_active=${!currentStatus}`, { method: 'PUT' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update key');
 
       toast.success(`API key ${!currentStatus ? 'activated' : 'deactivated'}`);
       fetchApiKeys();
@@ -96,12 +90,9 @@ const Admin = () => {
     if (!confirm('Are you sure you want to delete this API key?')) return;
 
     try {
-      const { error } = await supabase
-        .from('admin_api_keys')
-        .delete()
-        .eq('id', keyId);
-
-      if (error) throw error;
+      const res = await fetch(`src/api/admin.php?action=delete&id=${encodeURIComponent(keyId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete key');
 
       toast.success('API key deleted');
       fetchApiKeys();

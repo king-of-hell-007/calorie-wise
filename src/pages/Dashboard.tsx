@@ -4,7 +4,6 @@ import { Camera, TrendingUp, Target, Flame, Award, Calendar } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MobileNav } from '@/components/MobileNav';
 
@@ -46,36 +45,22 @@ export default function Dashboard() {
   }, []);
 
   const checkOnboarding = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate('/onboarding');
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.onboarding_completed) {
-      navigate('/onboarding');
-    }
+    const token = localStorage.getItem('auth_token');
+    if (!token) { navigate('/auth'); return; }
+    const res = await fetch('src/api/profiles.php?action=me', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok) { navigate('/auth'); return; }
+    if (!data.profile?.onboarding_completed) navigate('/onboarding');
   };
 
   const loadProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('target_calories, protein_g, carbs_g, fat_g, current_streak_days, total_points, goal')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
+      const token = localStorage.getItem('auth_token');
+      if (!token) { navigate('/auth'); return; }
+      const res = await fetch('src/api/profiles.php?action=me', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load profile');
+      setProfile(data.profile);
     } catch (error: any) {
       toast({
         title: 'Error loading profile',
@@ -89,22 +74,15 @@ export default function Dashboard() {
 
   const loadTodaysMeals = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      const res = await fetch('src/api/meals.php?action=today', { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load meals');
 
-      const today = new Date().toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('meal_entries')
-        .select('total_calories, total_protein, total_carbs, total_fat')
-        .eq('user_id', user.id)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`);
-
-      if (error) throw error;
-
+      const data = json.meals || [];
       if (data) {
-        const totals = data.reduce((acc, meal) => ({
+        const totals = data.reduce((acc: any, meal: any) => ({
           calories: acc.calories + (meal.total_calories || 0),
           protein: acc.protein + (meal.total_protein || 0),
           carbs: acc.carbs + (meal.total_carbs || 0),

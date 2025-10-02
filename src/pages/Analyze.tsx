@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ImageUpload } from '@/components/ImageUpload';
 import { NutritionResults } from '@/components/NutritionResults';
 import { MobileNav } from '@/components/MobileNav';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,8 +44,8 @@ export default function Analyze() {
     setNutritionData(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
         toast({
           title: 'Authentication required',
           description: 'Please sign in to analyze meals',
@@ -61,11 +60,13 @@ export default function Analyze() {
         const base64Image = reader.result as string;
         setImageUrl(base64Image);
 
-        const { data, error } = await supabase.functions.invoke('analyze-nutrition-gemini', {
-          body: { image: base64Image, userId: user.id },
+        const res = await fetch('src/api/analyze.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ image: base64Image })
         });
-
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Analyze failed');
 
         setNutritionData(data);
 
@@ -77,38 +78,30 @@ export default function Analyze() {
           else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
           else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
 
-          await supabase.from('meal_entries').insert([{
-            user_id: user.id,
-            meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            image_url: base64Image,
-            analyzer_json: data,
-            total_calories: data.total.calories,
-            total_protein: data.total.protein,
-            total_carbs: data.total.carbs,
-            total_fat: data.total.fat,
-            confidence: data.food[0]?.confidence || null
-          }]);
+          await fetch('src/api/meals.php?action=create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+              image_url: base64Image,
+              analyzer_json: data,
+              total_calories: data.total.calories,
+              total_protein: data.total.protein,
+              total_carbs: data.total.carbs,
+              total_fat: data.total.fat,
+              confidence: data.food[0]?.confidence || null
+            })
+          });
 
           // Award points
-          await supabase.from('points_history').insert({
-            user_id: user.id,
-            points: 10,
-            reason: 'Logged a meal'
+          await fetch('src/api/points.php?action=add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ points: 10, reason: 'Logged a meal' })
           });
 
           // Update total points
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('total_points')
-            .eq('id', user.id)
-            .single();
-
-          if (profile) {
-            await supabase
-              .from('profiles')
-              .update({ total_points: (profile.total_points || 0) + 10 })
-              .eq('id', user.id);
-          }
+          // points.php already increments profile points
 
           toast({
             title: 'Meal logged!',

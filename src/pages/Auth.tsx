@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,35 +16,15 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if already authenticated
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        checkOnboardingStatus(session.user.id);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        checkOnboardingStatus(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      navigate('/dashboard');
+    }
   }, []);
 
-  const checkOnboardingStatus = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed')
-      .eq('id', userId)
-      .single();
-
-    if (profile?.onboarding_completed) {
-      navigate('/dashboard');
-    } else {
-      navigate('/onboarding');
-    }
+  const checkOnboardingStatus = async () => {
+    // Placeholder until profiles PHP endpoint exists
+    navigate('/dashboard');
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -53,19 +32,17 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
-        }
+      const res = await fetch('src/api/auth.php?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
-
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
 
       toast({
         title: 'Account created!',
-        description: 'Please check your email to verify your account.',
+        description: 'You can now sign in with your credentials.',
       });
     } catch (error: any) {
       toast({
@@ -83,14 +60,19 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch('src/api/auth.php?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sign in failed');
 
-      if (error) throw error;
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
 
-      // Auth state change will handle navigation
+      await checkOnboardingStatus();
     } catch (error: any) {
       toast({
         title: 'Sign in failed',

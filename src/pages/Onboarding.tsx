@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 type OnboardingData = {
@@ -37,10 +36,8 @@ export default function Onboarding() {
   useEffect(() => {
     // Check if user is authenticated
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/auth');
-      }
+      const token = localStorage.getItem('auth_token');
+      if (!token) navigate('/auth');
     };
     checkAuth();
   }, [navigate]);
@@ -75,8 +72,8 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Not authenticated');
 
       // Calculate BMR, TDEE, and macros
       const heightM = data.height_cm! / 100;
@@ -118,8 +115,6 @@ export default function Onboarding() {
       const carbG = Math.round(carbCalories / 4);
 
       const profileData = {
-        id: user.id,
-        email: user.email,
         age: data.age,
         sex: data.sex,
         height_cm: data.height_cm,
@@ -141,11 +136,13 @@ export default function Onboarding() {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(profileData as any, { onConflict: 'id' });
-
-      if (error) throw error;
+      const res = await fetch('src/api/profiles.php?action=me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(profileData)
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to save profile');
 
       toast({
         title: 'Profile Created!',

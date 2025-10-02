@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
 import { TrendingUp, Calendar } from 'lucide-react';
 
@@ -24,19 +23,17 @@ export default function Progress() {
 
   const loadWeeklyData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
 
       const startDate = subDays(new Date(), 6);
       const startDateStr = format(startDate, 'yyyy-MM-dd');
 
-      const { data, error } = await supabase
-        .from('meal_entries')
-        .select('created_at, total_calories, total_protein, total_carbs, total_fat')
-        .eq('user_id', user.id)
-        .gte('created_at', `${startDateStr}T00:00:00`);
-
-      if (error) throw error;
+      const res = await fetch(`src/api/meals.php?action=range&start=${startDateStr}&end=${format(new Date(), 'yyyy-MM-dd')}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load weekly data');
 
       // Group by date
       const grouped: { [key: string]: DailyData } = {};
@@ -53,8 +50,8 @@ export default function Progress() {
         };
       }
 
-      data?.forEach(entry => {
-        const date = format(new Date(entry.created_at), 'yyyy-MM-dd');
+      (json.days || []).forEach((entry: any) => {
+        const date = entry.day;
         if (grouped[date]) {
           grouped[date].calories += entry.total_calories || 0;
           grouped[date].protein += entry.total_protein || 0;

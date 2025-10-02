@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 import heroImage from '@/assets/hero-nutrition.jpg';
 import logo from '@/assets/caloriewise-logo.png';
 import { ArrowRight, Sparkles, TrendingUp, Award } from 'lucide-react';
@@ -14,22 +13,12 @@ export default function Index() {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_completed')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.onboarding_completed) {
-        navigate('/dashboard');
-      } else {
-        navigate('/onboarding');
-      }
-    } else {
-      // Not authenticated, stay on landing page
-    }
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    const res = await fetch('src/api/profiles.php?action=me', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok) return;
+    if (data.profile?.onboarding_completed) navigate('/dashboard'); else navigate('/onboarding');
   };
 
   return (

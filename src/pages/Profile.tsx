@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User, LogOut, Target, Activity, TrendingUp, Settings } from 'lucide-react';
 
@@ -40,17 +39,17 @@ export default function Profile() {
 
   const loadProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        navigate('/auth');
+        return;
+      }
+      const res = await fetch('src/api/profiles.php?action=me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load profile');
+      setProfile(data.profile);
     } catch (error: any) {
       toast({
         title: 'Error loading profile',
@@ -64,7 +63,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      localStorage.removeItem('auth_token');
       navigate('/');
     } catch (error: any) {
       toast({
