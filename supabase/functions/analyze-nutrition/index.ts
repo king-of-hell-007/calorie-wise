@@ -12,8 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const formData = await req.formData()
-    const image = formData.get('image') as File
+    const { image, filename, contentType } = await req.json()
 
     if (!image) {
       return new Response(
@@ -22,9 +21,19 @@ serve(async (req) => {
       )
     }
 
+    // Convert base64 to Blob
+    const base64Data = image.split(',')[1]
+    const byteCharacters = atob(base64Data)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    const blob = new Blob([byteArray], { type: contentType || 'image/jpeg' })
+
     // Create a new FormData to send to the webhook
     const webhookFormData = new FormData()
-    webhookFormData.append('image', image)
+    webhookFormData.append('image', blob, filename || 'image.jpg')
 
     // Send to the webhook
     console.log('Calling webhook:', 'http://34.121.71.147:5678/webhook/Calorie-analysis')
