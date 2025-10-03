@@ -377,20 +377,20 @@ export default function Onboarding() {
                   <Label>Typical session duration</Label>
                   <RadioGroup value={data.exercise_duration} onValueChange={(v) => setData({ ...data, exercise_duration: v as any })}>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="short" id="short" />
-                      <Label htmlFor="short" className="cursor-pointer">15-30 min</Label>
+                      <RadioGroupItem value="15_30_min" id="15_30_min" />
+                      <Label htmlFor="15_30_min" className="cursor-pointer">15-30 min</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="medium" />
-                      <Label htmlFor="medium" className="cursor-pointer">30-60 min</Label>
+                      <RadioGroupItem value="30_60_min" id="30_60_min" />
+                      <Label htmlFor="30_60_min" className="cursor-pointer">30-60 min</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="long" id="long" />
-                      <Label htmlFor="long" className="cursor-pointer">60-120 min</Label>
+                      <RadioGroupItem value="60_120_min" id="60_120_min" />
+                      <Label htmlFor="60_120_min" className="cursor-pointer">60-120 min</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="very_long" id="very_long" />
-                      <Label htmlFor="very_long" className="cursor-pointer">2+ hours</Label>
+                      <RadioGroupItem value="120_plus_min" id="120_plus_min" />
+                      <Label htmlFor="120_plus_min" className="cursor-pointer">2+ hours</Label>
                     </div>
                   </RadioGroup>
                 </div>
