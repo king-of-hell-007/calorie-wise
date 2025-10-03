@@ -55,67 +55,71 @@ export default function Analyze() {
         return;
       }
 
+      // Create preview URL for display
       const reader = new FileReader();
       reader.readAsDataURL(imageFile);
-      reader.onloadend = async () => {
-        const base64Image = reader.result as string;
-        setImageUrl(base64Image);
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
 
-        const { data, error } = await supabase.functions.invoke('analyze-nutrition-gemini', {
-          body: { image: base64Image, userId: user.id },
+      // Send image as FormData to webhook
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      setNutritionData(data);
+
+      // Auto-save meal entry
+      if (data?.status === 'success') {
+        const hour = new Date().getHours();
+        let mealSlot = 'snack';
+        if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
+        else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
+        else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
+
+        await supabase.from('meal_entries').insert([{
+          user_id: user.id,
+          meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+          image_url: imageUrl,
+          analyzer_json: data,
+          total_calories: data.total.calories,
+          total_protein: data.total.protein,
+          total_carbs: data.total.carbs,
+          total_fat: data.total.fat,
+          confidence: data.food[0]?.confidence || null
+        }]);
+
+        // Award points
+        await supabase.from('points_history').insert({
+          user_id: user.id,
+          points: 10,
+          reason: 'Logged a meal'
         });
 
-        if (error) throw error;
+        // Update total points
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('total_points')
+          .eq('id', user.id)
+          .single();
 
-        setNutritionData(data);
-
-        // Auto-save meal entry
-        if (data?.status === 'success') {
-          const hour = new Date().getHours();
-          let mealSlot = 'snack';
-          if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
-          else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
-          else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
-
-          await supabase.from('meal_entries').insert([{
-            user_id: user.id,
-            meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            image_url: base64Image,
-            analyzer_json: data,
-            total_calories: data.total.calories,
-            total_protein: data.total.protein,
-            total_carbs: data.total.carbs,
-            total_fat: data.total.fat,
-            confidence: data.food[0]?.confidence || null
-          }]);
-
-          // Award points
-          await supabase.from('points_history').insert({
-            user_id: user.id,
-            points: 10,
-            reason: 'Logged a meal'
-          });
-
-          // Update total points
-          const { data: profile } = await supabase
+        if (profile) {
+          await supabase
             .from('profiles')
-            .select('total_points')
-            .eq('id', user.id)
-            .single();
-
-          if (profile) {
-            await supabase
-              .from('profiles')
-              .update({ total_points: (profile.total_points || 0) + 10 })
-              .eq('id', user.id);
-          }
-
-          toast({
-            title: 'Meal logged!',
-            description: '+10 points earned',
-          });
+            .update({ total_points: (profile.total_points || 0) + 10 })
+            .eq('id', user.id);
         }
-      };
+
+        toast({
+          title: 'Meal logged!',
+          description: '+10 points earned',
+        });
+      }
     } catch (error: any) {
       console.error('Analysis error:', error);
       toast({
