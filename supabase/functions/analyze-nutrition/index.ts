@@ -53,7 +53,12 @@ serve(async (req) => {
     const data = await response.json()
     
     // Extract the first element from the array response
-    const responseData = Array.isArray(data) ? data[0] : data
+    let responseData = Array.isArray(data) ? data[0] : data
+    
+    // Extract nested output property if it exists
+    if (responseData?.output) {
+      responseData = responseData.output
+    }
     
     return new Response(
       JSON.stringify(responseData), 
