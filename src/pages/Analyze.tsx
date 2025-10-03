@@ -124,10 +124,25 @@ export default function Analyze() {
             .eq('id', user.id);
         }
 
-        toast({
-          title: 'Meal logged!',
-          description: '+10 points earned',
+        // Check for badge unlocks
+        const { data: badgeData } = await supabase.functions.invoke('check-badges', {
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
         });
+
+        if (badgeData?.newlyUnlocked?.length > 0) {
+          const badge = badgeData.newlyUnlocked[0];
+          toast({
+            title: `🎉 Badge Unlocked: ${badge.name}!`,
+            description: `+${badge.points} points earned`,
+          });
+        } else {
+          toast({
+            title: 'Meal logged!',
+            description: '+10 points earned',
+          });
+        }
       }
     } catch (error: any) {
       console.error('Analysis error:', error);

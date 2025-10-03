@@ -43,7 +43,23 @@ export default function Dashboard() {
     checkOnboarding();
     loadProfile();
     loadTodaysMeals();
+    checkBadges();
   }, []);
+
+  const checkBadges = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await supabase.functions.invoke('check-badges', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+    } catch (error) {
+      console.error('Error checking badges:', error);
+    }
+  };
 
   const checkOnboarding = async () => {
     const { data: { user } } = await supabase.auth.getUser();

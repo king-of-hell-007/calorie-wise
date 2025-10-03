@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Award, Lock } from 'lucide-react';
+import { Award, Lock, Trophy, Star, Zap, Flame, Target, TrendingUp } from 'lucide-react';
 
 type Badge = {
   id: string;
@@ -59,6 +59,25 @@ export default function Badges() {
     return userBadges.some(ub => ub.badge_id === badgeId);
   };
 
+  const getBadgeGradient = (index: number) => {
+    const gradients = [
+      'from-blue-500 to-cyan-500',
+      'from-purple-500 to-pink-500',
+      'from-orange-500 to-red-500',
+      'from-green-500 to-emerald-500',
+      'from-yellow-500 to-orange-500',
+      'from-indigo-500 to-purple-500',
+      'from-pink-500 to-rose-500',
+      'from-teal-500 to-cyan-500',
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  const getBadgeIcon = (index: number) => {
+    const icons = [Award, Trophy, Star, Zap, Flame, Target, TrendingUp];
+    return icons[index % icons.length];
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center pb-24">
@@ -84,33 +103,40 @@ export default function Badges() {
             <div className="grid gap-3">
               {allBadges
                 .filter(badge => isUnlocked(badge.id))
-                .map(badge => (
-                  <Card key={badge.id} className="shadow-medium border-primary/20">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center shadow-soft">
-                            <Award className="w-8 h-8 text-white" />
+                .map((badge, index) => {
+                  const Icon = getBadgeIcon(index);
+                  const gradient = getBadgeGradient(index);
+                  return (
+                    <Card key={badge.id} className="shadow-strong border-2 border-primary/30 bg-gradient-card overflow-hidden relative">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16" />
+                      <CardContent className="p-4 relative">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-strong animate-scale-in`}>
+                              <Icon className="w-8 h-8 text-white" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-lg">{badge.icon} {badge.name}</h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {badge.description}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs font-bold bg-gradient-to-r ${gradient} text-white px-3 py-1.5 rounded-full shadow-medium`}>
+                                +{badge.points} points
+                              </span>
+                              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                                🎉 {new Date(userBadges.find(ub => ub.badge_id === badge.id)?.unlocked_at || '').toLocaleDateString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-lg mb-1">{badge.name}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {badge.description}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-                              +{badge.points} points
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              Unlocked {new Date(userBadges.find(ub => ub.badge_id === badge.id)?.unlocked_at || '').toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           </div>
         )}
@@ -123,30 +149,38 @@ export default function Badges() {
           <div className="grid gap-3">
             {allBadges
               .filter(badge => !isUnlocked(badge.id))
-              .map(badge => (
-                <Card key={badge.id} className="shadow-medium opacity-75">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                          <Lock className="w-8 h-8 text-muted-foreground" />
+              .map((badge, index) => {
+                const Icon = getBadgeIcon(index);
+                const gradient = getBadgeGradient(index);
+                return (
+                  <Card key={badge.id} className="shadow-medium border border-dashed border-muted-foreground/30 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent" />
+                    <CardContent className="p-4 relative">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative">
+                            <Lock className="w-6 h-6 text-muted-foreground absolute" />
+                            <Icon className="w-7 h-7 text-muted-foreground/30 blur-[1px]" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-lg text-muted-foreground">
+                              {badge.icon} {badge.name}
+                            </h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {badge.description}
+                          </p>
+                          <span className={`inline-block text-xs font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent px-0 py-1`}>
+                            🔒 Unlock to earn +{badge.points} points
+                          </span>
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg mb-1 text-muted-foreground">
-                          {badge.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {badge.description}
-                        </p>
-                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                          +{badge.points} points
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </div>
 
