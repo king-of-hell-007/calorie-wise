@@ -52,80 +52,83 @@ export default function Analyze() {
           description: 'Please sign in to analyze meals',
           variant: 'destructive',
         });
+        setIsAnalyzing(false);
         return;
       }
 
       // Convert image to base64 for sending to edge function
-      const reader = new FileReader();
-      reader.readAsDataURL(imageFile);
-      reader.onloadend = async () => {
-        const base64Image = reader.result as string;
-        setImageUrl(base64Image);
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
 
-        // Send base64 image to edge function
-        const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
-          body: { 
-            image: base64Image,
-            filename: imageFile.name,
-            contentType: imageFile.type
-          },
+      setImageUrl(base64Image);
+
+      // Send base64 image to edge function
+      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
+        body: { 
+          image: base64Image,
+          filename: imageFile.name,
+          contentType: imageFile.type
+        },
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      console.log('Analysis response:', data);
+      setNutritionData(data);
+
+      // Auto-save meal entry
+      if (data?.status === 'success') {
+        const hour = new Date().getHours();
+        let mealSlot = 'snack';
+        if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
+        else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
+        else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
+
+        await supabase.from('meal_entries').insert([{
+          user_id: user.id,
+          meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+          image_url: base64Image,
+          analyzer_json: data,
+          total_calories: data.total.calories,
+          total_protein: data.total.protein,
+          total_carbs: data.total.carbs,
+          total_fat: data.total.fat,
+          confidence: data.food[0]?.confidence || null
+        }]);
+
+        // Award points
+        await supabase.from('points_history').insert({
+          user_id: user.id,
+          points: 10,
+          reason: 'Logged a meal'
         });
 
-        if (error) {
-          console.error('Edge function error:', error);
-          throw error;
-        }
+        // Update total points
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('total_points')
+          .eq('id', user.id)
+          .single();
 
-        console.log('Analysis response:', data);
-        setNutritionData(data);
-
-        // Auto-save meal entry
-        if (data?.status === 'success') {
-          const hour = new Date().getHours();
-          let mealSlot = 'snack';
-          if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
-          else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
-          else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
-
-          await supabase.from('meal_entries').insert([{
-            user_id: user.id,
-            meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            image_url: base64Image,
-            analyzer_json: data,
-            total_calories: data.total.calories,
-            total_protein: data.total.protein,
-            total_carbs: data.total.carbs,
-            total_fat: data.total.fat,
-            confidence: data.food[0]?.confidence || null
-          }]);
-
-          // Award points
-          await supabase.from('points_history').insert({
-            user_id: user.id,
-            points: 10,
-            reason: 'Logged a meal'
-          });
-
-          // Update total points
-          const { data: profile } = await supabase
+        if (profile) {
+          await supabase
             .from('profiles')
-            .select('total_points')
-            .eq('id', user.id)
-            .single();
-
-          if (profile) {
-            await supabase
-              .from('profiles')
-              .update({ total_points: (profile.total_points || 0) + 10 })
-              .eq('id', user.id);
-          }
-
-          toast({
-            title: 'Meal logged!',
-            description: '+10 points earned',
-          });
+            .update({ total_points: (profile.total_points || 0) + 10 })
+            .eq('id', user.id);
         }
-      };
+
+        toast({
+          title: 'Meal logged!',
+          description: '+10 points earned',
+        });
+      }
     } catch (error: any) {
       console.error('Analysis error:', error);
       toast({
