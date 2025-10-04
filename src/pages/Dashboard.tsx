@@ -46,6 +46,19 @@ export default function Dashboard() {
     checkBadges();
   }, []);
 
+  // Refresh data when component becomes visible (e.g., returning from analyze page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadProfile();
+        loadTodaysMeals();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const checkBadges = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -86,13 +99,19 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('target_calories, protein_g, carbs_g, fat_g, current_streak_days, total_points, goal')
+        .select('target_calories, protein_g, carbs_g, fat_g, current_streak_days, total_points, goal, onboarding_completed')
         .eq('id', user.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile loading error:', error);
+        throw error;
+      }
+      
+      console.log('Loaded profile:', data);
       setProfile(data);
     } catch (error: any) {
+      console.error('Error loading profile:', error);
       toast({
         title: 'Error loading profile',
         description: error.message,
@@ -117,7 +136,12 @@ export default function Dashboard() {
         .gte('created_at', `${today}T00:00:00`)
         .lte('created_at', `${today}T23:59:59`);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Meals loading error:', error);
+        throw error;
+      }
+
+      console.log('Loaded today\'s meals:', data);
 
       if (data) {
         const totals = data.reduce((acc, meal) => ({
@@ -128,10 +152,16 @@ export default function Dashboard() {
           mealCount: acc.mealCount + 1
         }), { calories: 0, protein: 0, carbs: 0, fat: 0, mealCount: 0 });
 
+        console.log('Calculated totals:', totals);
         setDailyTotals(totals);
       }
     } catch (error: any) {
       console.error('Error loading meals:', error);
+      toast({
+        title: 'Error loading meals',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 

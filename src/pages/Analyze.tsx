@@ -85,43 +85,92 @@ export default function Analyze() {
 
       // Auto-save meal entry
       if (data?.status === 'success') {
+        console.log('Saving meal entry:', data);
+        
         const hour = new Date().getHours();
         let mealSlot = 'snack';
         if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
         else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
         else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
 
-        await supabase.from('meal_entries').insert([{
+        // Insert meal entry
+        const { error: mealError } = await supabase.from('meal_entries').insert([{
           user_id: user.id,
           meal_slot: mealSlot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
           image_url: base64Image,
           analyzer_json: data,
-          total_calories: data.total.calories,
-          total_protein: data.total.protein,
-          total_carbs: data.total.carbs,
-          total_fat: data.total.fat,
-          confidence: data.food[0]?.confidence || null
+          total_calories: data.total?.calories || 0,
+          total_protein: data.total?.protein || 0,
+          total_carbs: data.total?.carbs || 0,
+          total_fat: data.total?.fat || 0,
+          confidence: data.food?.[0]?.confidence || null
         }]);
 
+        if (mealError) {
+          console.error('Error saving meal entry:', mealError);
+          throw new Error(`Failed to save meal: ${mealError.message}`);
+        }
+
         // Award points
-        await supabase.from('points_history').insert({
+        const { error: pointsError } = await supabase.from('points_history').insert({
           user_id: user.id,
           points: 10,
           reason: 'Logged a meal'
         });
 
-        // Update total points
-        const { data: profile } = await supabase
+        if (pointsError) {
+          console.error('Error saving points:', pointsError);
+        }
+
+        // Update total points and streak
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('total_points')
+          .select('total_points, current_streak_days, longest_streak_days, last_log_date')
           .eq('id', user.id)
           .single();
 
-        if (profile) {
-          await supabase
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        } else if (profile) {
+          // Calculate streak
+          const today = new Date().toISOString().split('T')[0];
+          const lastLogDate = profile.last_log_date;
+          let newStreak = profile.current_streak_days;
+          
+          if (!lastLogDate) {
+            // First meal ever
+            newStreak = 1;
+          } else {
+            const lastLog = new Date(lastLogDate);
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (lastLog.toDateString() === yesterday.toDateString()) {
+              // Logged yesterday, continue streak
+              newStreak = profile.current_streak_days + 1;
+            } else if (lastLog.toDateString() !== today) {
+              // Gap in logging, reset streak
+              newStreak = 1;
+            }
+            // If logged today, keep current streak
+          }
+
+          const newLongestStreak = Math.max(profile.longest_streak_days, newStreak);
+
+          // Update profile
+          const { error: updateError } = await supabase
             .from('profiles')
-            .update({ total_points: (profile.total_points || 0) + 10 })
+            .update({ 
+              total_points: (profile.total_points || 0) + 10,
+              current_streak_days: newStreak,
+              longest_streak_days: newLongestStreak,
+              last_log_date: today
+            })
             .eq('id', user.id);
+
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+          }
         }
 
         // Check for badge unlocks
