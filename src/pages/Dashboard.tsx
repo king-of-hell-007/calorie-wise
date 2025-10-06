@@ -244,17 +244,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Protein</p>
-                <p className="font-bold text-primary">{dailyTotals.protein}g</p>
+                <p className="font-bold text-primary">{dailyTotals.protein.toFixed(2)}g</p>
                 <Progress value={Math.min(proteinProgress, 100)} className="h-1.5 mt-1" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Carbs</p>
-                <p className="font-bold text-orange-600">{dailyTotals.carbs}g</p>
+                <p className="font-bold text-orange-600">{dailyTotals.carbs.toFixed(2)}g</p>
                 <Progress value={Math.min(carbsProgress, 100)} className="h-1.5 mt-1" />
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Fat</p>
-                <p className="font-bold text-blue-600">{dailyTotals.fat}g</p>
+                <p className="font-bold text-blue-600">{dailyTotals.fat.toFixed(2)}g</p>
                 <Progress value={Math.min(fatProgress, 100)} className="h-1.5 mt-1" />
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
-              onClick={() => navigate('/analyze')}
+              onClick={() => navigate('/analyze', { state: { autoLog: true } })}
               className="w-full bg-gradient-cta text-white h-14 text-lg shadow-medium hover:shadow-strong"
             >
               <Camera className="w-5 h-5 mr-2" />

@@ -26,6 +26,7 @@ type Profile = {
   current_streak_days: number;
   longest_streak_days: number;
   total_points: number;
+  is_admin: boolean;
 };
 
 export default function Profile() {
@@ -43,14 +44,23 @@ export default function Profile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (profileError) throw profileError;
+
+      const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+      if (roleError) throw roleError;
+      setProfile({ ...profileData, is_admin: !!roleData });
     } catch (error: any) {
       toast({
         title: 'Error loading profile',
@@ -154,7 +164,7 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Weight</p>
-                <p className="font-semibold">{profile.weight_kg} kg</p>
+                <p className="font-semibold">{profile.weight_kg.toFixed(2)} kg</p>
               </div>
             </div>
           </CardContent>
@@ -172,15 +182,15 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">BMI</p>
-                <p className="font-semibold text-primary">{profile.bmi.toFixed(1)}</p>
+                <p className="font-semibold text-primary">{profile.bmi.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">BMR</p>
-                <p className="font-semibold">{profile.bmr} kcal</p>
+                <p className="font-semibold">{profile.bmr.toFixed(0)} kcal</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">TDEE</p>
-                <p className="font-semibold">{profile.tdee} kcal</p>
+                <p className="font-semibold">{profile.tdee.toFixed(0)} kcal</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Target</p>
@@ -190,9 +200,9 @@ export default function Profile() {
             <div className="pt-2 border-t">
               <p className="text-sm text-muted-foreground mb-2">Daily Macros</p>
               <div className="flex justify-between text-sm">
-                <span>Protein: <strong className="text-primary">{profile.protein_g}g</strong></span>
-                <span>Carbs: <strong className="text-orange-600">{profile.carbs_g}g</strong></span>
-                <span>Fat: <strong className="text-blue-600">{profile.fat_g}g</strong></span>
+                <span>Protein: <strong className="text-primary">{profile.protein_g.toFixed(2)}g</strong></span>
+                <span>Carbs: <strong className="text-orange-600">{profile.carbs_g.toFixed(2)}g</strong></span>
+                <span>Fat: <strong className="text-blue-600">{profile.fat_g.toFixed(2)}g</strong></span>
               </div>
             </div>
           </CardContent>
@@ -250,14 +260,16 @@ export default function Profile() {
 
         {/* Actions */}
         <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full h-12"
-            onClick={() => navigate('/admin')}
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Admin Settings
-          </Button>
+          {profile.is_admin && (
+            <Button
+              variant="outline"
+              className="w-full h-12"
+              onClick={() => navigate('/admin')}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Admin Settings
+            </Button>
+          )}
           <Button
             variant="destructive"
             className="w-full h-12"

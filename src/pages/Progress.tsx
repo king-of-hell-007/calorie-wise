@@ -141,9 +141,9 @@ export default function Progress() {
                       />
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>P: {day.protein}g</span>
-                      <span>C: {day.carbs}g</span>
-                      <span>F: {day.fat}g</span>
+                      <span>P: {day.protein.toFixed(2)}g</span>
+                      <span>C: {day.carbs.toFixed(2)}g</span>
+                      <span>F: {day.fat.toFixed(2)}g</span>
                       <span>{day.mealCount} meals</span>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ export default function Progress() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium text-primary">Protein</span>
-                        <span className="font-bold">{totalProtein}g ({proteinPercent.toFixed(0)}%)</span>
+                        <span className="font-bold">{totalProtein.toFixed(2)}g ({proteinPercent.toFixed(0)}%)</span>
                       </div>
                       <div className="h-3 bg-secondary rounded-full overflow-hidden">
                         <div
@@ -187,7 +187,7 @@ export default function Progress() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium text-orange-600">Carbs</span>
-                        <span className="font-bold">{totalCarbs}g ({carbsPercent.toFixed(0)}%)</span>
+                        <span className="font-bold">{totalCarbs.toFixed(2)}g ({carbsPercent.toFixed(0)}%)</span>
                       </div>
                       <div className="h-3 bg-secondary rounded-full overflow-hidden">
                         <div
@@ -199,7 +199,7 @@ export default function Progress() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium text-blue-600">Fat</span>
-                        <span className="font-bold">{totalFat}g ({fatPercent.toFixed(0)}%)</span>
+                        <span className="font-bold">{totalFat.toFixed(2)}g ({fatPercent.toFixed(0)}%)</span>
                       </div>
                       <div className="h-3 bg-secondary rounded-full overflow-hidden">
                         <div
