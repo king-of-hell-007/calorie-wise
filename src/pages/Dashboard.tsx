@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MobileNav } from '@/components/MobileNav';
+import logo from '@/assets/caloriewise-logo.png';
 
 type Profile = {
   target_calories: number;
@@ -193,129 +194,119 @@ export default function Dashboard() {
   const fatProgress = (dailyTotals.fat / profile.fat_g) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-hero pb-24">
-      {/* Header */}
-      <div className="bg-gradient-primary text-white p-6 shadow-strong">
-        <h1 className="text-2xl font-bold mb-1">CalorieWise</h1>
-        <p className="text-white/90 text-sm">Track your nutrition journey</p>
-      </div>
-
-      <div className="p-4 space-y-4 max-w-screen-xl mx-auto">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="shadow-medium">
-            <CardContent className="pt-4 pb-3 text-center">
-              <Flame className="w-6 h-6 mx-auto mb-2 text-primary" />
-              <p className="text-xs text-muted-foreground mb-1">Streak</p>
-              <p className="text-xl font-bold text-primary">{profile.current_streak_days}</p>
-              <p className="text-xs text-muted-foreground">days</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-medium">
-            <CardContent className="pt-4 pb-3 text-center">
-              <Award className="w-6 h-6 mx-auto mb-2 text-accent" />
-              <p className="text-xs text-muted-foreground mb-1">Points</p>
-              <p className="text-xl font-bold text-accent">{profile.total_points}</p>
-              <p className="text-xs text-muted-foreground">total</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-medium">
-            <CardContent className="pt-4 pb-3 text-center">
-              <Calendar className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-              <p className="text-xs text-muted-foreground mb-1">Logged</p>
-              <p className="text-xl font-bold text-blue-600">{dailyTotals.mealCount}</p>
-              <p className="text-xs text-muted-foreground">today</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Daily Calories */}
-        <Card className="shadow-strong border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center justify-between">
-              <span>Today's Calories</span>
-              <span className="text-sm font-normal text-muted-foreground">
-                {dailyTotals.calories} / {profile.target_calories} kcal
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={Math.min(calorieProgress, 100)} className="h-3" />
-            <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Protein</p>
-                <p className="font-bold text-primary">{dailyTotals.protein.toFixed(2)}g</p>
-                <Progress value={Math.min(proteinProgress, 100)} className="h-1.5 mt-1" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Carbs</p>
-                <p className="font-bold text-orange-600">{dailyTotals.carbs.toFixed(2)}g</p>
-                <Progress value={Math.min(carbsProgress, 100)} className="h-1.5 mt-1" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Fat</p>
-                <p className="font-bold text-blue-600">{dailyTotals.fat.toFixed(2)}g</p>
-                <Progress value={Math.min(fatProgress, 100)} className="h-1.5 mt-1" />
-              </div>
-            </div>
+    <>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="shadow-medium">
+          <CardContent className="pt-4 pb-3 text-center">
+            <Flame className="w-6 h-6 mx-auto mb-2 text-primary" />
+            <p className="text-xs text-muted-foreground mb-1">Streak</p>
+            <p className="text-xl font-bold text-primary">{profile.current_streak_days}</p>
+            <p className="text-xs text-muted-foreground">days</p>
           </CardContent>
         </Card>
+        <Card className="shadow-medium">
+          <CardContent className="pt-4 pb-3 text-center">
+            <Award className="w-6 h-6 mx-auto mb-2 text-accent" />
+            <p className="text-xs text-muted-foreground mb-1">Points</p>
+            <p className="text-xl font-bold text-accent">{profile.total_points}</p>
+            <p className="text-xs text-muted-foreground">total</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-medium">
+          <CardContent className="pt-4 pb-3 text-center">
+            <Calendar className="w-6 h-6 mx-auto mb-2 text-blue-600" />
+            <p className="text-xs text-muted-foreground mb-1">Logged</p>
+            <p className="text-xl font-bold text-blue-600">{dailyTotals.mealCount}</p>
+            <p className="text-xs text-muted-foreground">today</p>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Quick Actions */}
-        <Card className="shadow-strong">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+      {/* Daily Calories */}
+      <Card className="shadow-strong border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center justify-between">
+            <span>Today's Calories</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              {dailyTotals.calories} / {profile.target_calories} kcal
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Progress value={Math.min(calorieProgress, 100)} className="h-3" />
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Protein</p>
+              <p className="font-bold text-primary">{dailyTotals.protein.toFixed(2)}g</p>
+              <Progress value={Math.min(proteinProgress, 100)} className="h-1.5 mt-1" />
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Carbs</p>
+              <p className="font-bold text-orange-600">{dailyTotals.carbs.toFixed(2)}g</p>
+              <Progress value={Math.min(carbsProgress, 100)} className="h-1.5 mt-1" />
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Fat</p>
+              <p className="font-bold text-blue-600">{dailyTotals.fat.toFixed(2)}g</p>
+              <Progress value={Math.min(fatProgress, 100)} className="h-1.5 mt-1" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card className="shadow-strong">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            onClick={() => navigate('/analyze', { state: { autoLog: true, from: 'dashboard' } })}
+            className="w-full bg-gradient-cta text-white h-14 text-lg shadow-medium hover:shadow-strong"
+          >
+            <Camera className="w-5 h-5 mr-2" />
+            Log a Meal
+          </Button>
+          <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => navigate('/analyze', { state: { autoLog: true } })}
-              className="w-full bg-gradient-cta text-white h-14 text-lg shadow-medium hover:shadow-strong"
+              variant="outline"
+              onClick={() => navigate('/progress')}
+              className="h-12"
             >
-              <Camera className="w-5 h-5 mr-2" />
-              Log a Meal
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Progress
             </Button>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/progress')}
-                className="h-12"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Progress
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/badges')}
-                className="h-12"
-              >
-                <Award className="w-4 h-4 mr-2" />
-                Badges
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/badges')}
+              className="h-12"
+            >
+              <Award className="w-4 h-4 mr-2" />
+              Badges
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Goal Reminder */}
-        <Card className="shadow-medium bg-gradient-card">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-start gap-3">
-              <Target className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium mb-1">Your Goal</p>
-                <p className="text-sm text-muted-foreground">
-                  {profile.goal === 'lose_weight' && 'Losing weight steadily'}
-                  {profile.goal === 'gain_weight' && 'Gaining weight / bulking'}
-                  {profile.goal === 'maintain' && 'Maintaining current weight'}
-                  {profile.goal === 'recomposition' && 'Body recomposition'}
-                  {profile.goal === 'custom' && 'Custom goal'}
-                </p>
-              </div>
+      {/* Goal Reminder */}
+      <Card className="shadow-medium bg-gradient-card">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-3">
+            <Target className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium mb-1">Your Goal</p>
+              <p className="text-sm text-muted-foreground">
+                {profile.goal === 'lose_weight' && 'Losing weight steadily'}
+                {profile.goal === 'gain_weight' && 'Gaining weight / bulking'}
+                {profile.goal === 'maintain' && 'Maintaining current weight'}
+                {profile.goal === 'recomposition' && 'Body recomposition'}
+                {profile.goal === 'custom' && 'Custom goal'}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <MobileNav />
-    </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }

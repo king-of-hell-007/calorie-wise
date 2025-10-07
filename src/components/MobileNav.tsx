@@ -18,10 +18,12 @@ export const MobileNav = () => {
       <div className="flex justify-around items-center h-16 max-w-screen-xl mx-auto px-2">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
+          const linkState = path === '/analyze' ? { from: 'mobileNav' } : {};
           return (
             <Link
               key={path}
               to={path}
+              state={linkState}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-95 touch-manipulation",
                 isActive 

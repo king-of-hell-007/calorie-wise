@@ -15,6 +15,8 @@ import Badges from "./pages/Badges";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
+import { Layout } from "./components/Layout";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,11 +29,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/analyze" element={<Analyze />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/badges" element={<Badges />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+          <Route path="/analyze" element={<Layout><Analyze /></Layout>} />
+          <Route path="/progress" element={<Layout title="Your Progress"><Progress /></Layout>} />
+          <Route path="/badges" element={<Layout title="Your Badges"><Badges /></Layout>} />
+          <Route path="/profile" element={<Layout title="Your Profile"><Profile /></Layout>} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<Admin />} />
           </Route>

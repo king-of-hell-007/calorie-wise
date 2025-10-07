@@ -35,6 +35,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Hero Section */}
+      
       <div className="relative overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-10"

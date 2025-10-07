@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ type UserBadge = {
 };
 
 export default function Badges() {
+  const navigate = useNavigate();
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,10 @@ export default function Badges() {
   const loadBadges = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
 
       // Load all available badges
       const { data: badges, error: badgesError } = await supabase
@@ -87,94 +92,42 @@ export default function Badges() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-hero pb-24">
-      <div className="bg-gradient-primary text-white p-6 shadow-strong">
-        <h1 className="text-2xl font-bold mb-1">Badges & Rewards</h1>
-        <p className="text-white/90 text-sm">
-          {userBadges.length} of {allBadges.length} badges unlocked
-        </p>
-      </div>
-
-      <div className="p-4 space-y-4 max-w-screen-xl mx-auto">
-        {/* Unlocked Badges */}
-        {userBadges.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground px-1">Unlocked</h2>
-            <div className="grid gap-3">
-              {allBadges
-                .filter(badge => isUnlocked(badge.id))
-                .map((badge, index) => {
-                  const Icon = getBadgeIcon(index);
-                  const gradient = getBadgeGradient(index);
-                  return (
-                    <Card key={badge.id} className="shadow-strong border-2 border-primary/30 bg-gradient-card overflow-hidden relative">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16" />
-                      <CardContent className="p-4 relative">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-strong animate-scale-in`}>
-                              <Icon className="w-8 h-8 text-white" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-lg">{badge.icon} {badge.name}</h3>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {badge.description}
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-bold bg-gradient-to-r ${gradient} text-white px-3 py-1.5 rounded-full shadow-medium`}>
-                                +{badge.points} points
-                              </span>
-                              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
-                                🎉 {new Date(userBadges.find(ub => ub.badge_id === badge.id)?.unlocked_at || '').toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {/* Locked Badges */}
+    <>
+      {/* Unlocked Badges */}
+      {userBadges.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground px-1">
-            {userBadges.length > 0 ? 'Locked' : 'Available Badges'}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground px-1">Unlocked</h2>
           <div className="grid gap-3">
             {allBadges
-              .filter(badge => !isUnlocked(badge.id))
+              .filter(badge => isUnlocked(badge.id))
               .map((badge, index) => {
                 const Icon = getBadgeIcon(index);
                 const gradient = getBadgeGradient(index);
                 return (
-                  <Card key={badge.id} className="shadow-medium border border-dashed border-muted-foreground/30 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent" />
+                  <Card key={badge.id} className="shadow-strong border-2 border-primary/30 bg-gradient-card overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16" />
                     <CardContent className="p-4 relative">
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0">
-                          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative">
-                            <Lock className="w-6 h-6 text-muted-foreground absolute" />
-                            <Icon className="w-7 h-7 text-muted-foreground/30 blur-[1px]" />
+                          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-strong animate-scale-in`}>
+                            <Icon className="w-8 h-8 text-white" />
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-lg text-muted-foreground">
-                              {badge.icon} {badge.name}
-                            </h3>
+                            <h3 className="font-bold text-lg">{badge.icon} {badge.name}</h3>
                           </div>
                           <p className="text-sm text-muted-foreground mb-2">
                             {badge.description}
                           </p>
-                          <span className={`inline-block text-xs font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent px-0 py-1`}>
-                            🔒 Unlock to earn +{badge.points} points
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs font-bold bg-gradient-to-r ${gradient} text-white px-3 py-1.5 rounded-full shadow-medium`}>
+                              +{badge.points} points
+                            </span>
+                            <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                              🎉 {new Date(userBadges.find(ub => ub.badge_id === badge.id)?.unlocked_at || '').toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -183,20 +136,61 @@ export default function Badges() {
               })}
           </div>
         </div>
+      )}
 
-        {allBadges.length === 0 && (
-          <Card className="shadow-medium">
-            <CardContent className="p-6 text-center">
-              <Award className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                No badges available yet. Check back soon!
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Locked Badges */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-foreground px-1">
+          {userBadges.length > 0 ? 'Locked' : 'Available Badges'}
+        </h2>
+        <div className="grid gap-3">
+          {allBadges
+            .filter(badge => !isUnlocked(badge.id))
+            .map((badge, index) => {
+              const Icon = getBadgeIcon(index);
+              const gradient = getBadgeGradient(index);
+              return (
+                <Card key={badge.id} className="shadow-medium border border-dashed border-muted-foreground/30 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-transparent" />
+                  <CardContent className="p-4 relative">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative">
+                          <Lock className="w-6 h-6 text-muted-foreground absolute" />
+                          <Icon className="w-7 h-7 text-muted-foreground/30 blur-[1px]" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-lg text-muted-foreground">
+                            {badge.icon} {badge.name}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {badge.description}
+                        </p>
+                        <span className={`inline-block text-xs font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent px-0 py-1`}>
+                          🔒 Unlock to earn +{badge.points} points
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </div>
       </div>
 
-      <MobileNav />
-    </div>
+      {allBadges.length === 0 && (
+        <Card className="shadow-medium">
+          <CardContent className="p-6 text-center">
+            <Award className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              No badges available yet. Check back soon!
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 }

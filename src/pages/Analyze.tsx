@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ImageUpload';
 import { NutritionResults } from '@/components/NutritionResults';
-import { MobileNav } from '@/components/MobileNav';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type NutritionData = {
   status: string;
@@ -43,10 +40,18 @@ export default function Analyze() {
   const [autoLog, setAutoLog] = useState(false);
 
   useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/auth');
+      }
+    };
+    checkUser();
+
     if (location.state?.autoLog) {
       setAutoLog(true);
     }
-  }, [location.state]);
+  }, [location.state, navigate]);
 
   const logMeal = async (data: NutritionData, image: string) => {
     try {
@@ -245,38 +250,19 @@ export default function Analyze() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero pb-24">
-      <div className="bg-gradient-primary text-white p-6 shadow-strong flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/dashboard')}
-          className="text-white hover:bg-white/20 p-2 h-auto"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Analyze Meal</h1>
-          <p className="text-white/90 text-sm">Snap or upload to get instant nutrition info</p>
-        </div>
-      </div>
-
-      <div className="p-4 max-w-screen-xl mx-auto">
-        {!nutritionData ? (
-          <ImageUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
-        ) : (
-          <NutritionResults 
-            data={nutritionData} 
-            onReset={handleReset} 
-            imageUrl={imageUrl}
-            onLogMeal={handleLogMeal}
-            onDontLogMeal={handleDontLogMeal}
-            autoLog={autoLog}
-          />
-        )}
-      </div>
-
-      <MobileNav />
-    </div>
+    <>
+      {!nutritionData ? (
+        <ImageUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+      ) : (
+        <NutritionResults 
+          data={nutritionData} 
+          onReset={handleReset} 
+          imageUrl={imageUrl}
+          onLogMeal={handleLogMeal}
+          onDontLogMeal={handleDontLogMeal}
+          autoLog={autoLog}
+        />
+      )}
+    </>
   );
 }
