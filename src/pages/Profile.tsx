@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User, LogOut, Target, Activity, TrendingUp, Settings } from 'lucide-react';
+import { User, Target, Activity, TrendingUp, Settings } from 'lucide-react';
 
 type Profile = {
+  user_name: string;
   email: string;
   age: number;
   sex: string;
@@ -72,18 +73,7 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: 'Error signing out',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
+  
 
   if (loading) {
     return (
@@ -144,6 +134,10 @@ export default function Profile() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Username</p>
+              <p className="font-semibold">{profile.user_name}</p>
+            </div>
             <div>
               <p className="text-sm text-muted-foreground">Age</p>
               <p className="font-semibold">{profile.age} years</p>
@@ -264,14 +258,7 @@ export default function Profile() {
             Admin Settings
           </Button>
         )}
-        <Button
-          variant="destructive"
-          className="w-full h-12"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        
       </div>
     </>
   );

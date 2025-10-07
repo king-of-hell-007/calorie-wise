@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 type OnboardingData = {
+  user_name: string;
   age: number;
   sex: 'male' | 'female' | 'prefer_not_to_say';
   height_cm: number;
@@ -31,6 +32,7 @@ export default function Onboarding() {
   const [data, setData] = useState<Partial<OnboardingData>>({});
   const [bmi, setBmi] = useState<number | null>(null);
   const [suggestedGoal, setSuggestedGoal] = useState<string>('');
+  const [usernameError, setUsernameError] = useState<string>('');
 
   const totalSteps = 7;
 
@@ -57,7 +59,29 @@ export default function Onboarding() {
     return { category: 'Obese', suggestion: 'lose_weight', color: 'text-destructive' };
   };
 
+  const validateUsername = (username: string) => {
+    if (!username) {
+      setUsernameError('Please enter a valid username (3–20 characters, no spaces).');
+      return false;
+    }
+    if (username.length < 3 || username.length > 20) {
+      setUsernameError('Please enter a valid username (3–20 characters, no spaces).');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameError('Please enter a valid username (3–20 characters, no spaces).');
+      return false;
+    }
+    setUsernameError('');
+    return true;
+  };
+
   const handleNext = () => {
+    if (step === 2) {
+      if (!validateUsername(data.user_name || '')) {
+        return;
+      }
+    }
     if (step === 4 && data.weight_kg && data.height_cm) {
       const calculatedBMI = calculateBMI(data.weight_kg, data.height_cm);
       setBmi(calculatedBMI);
@@ -120,6 +144,7 @@ export default function Onboarding() {
       const profileData = {
         id: user.id,
         email: user.email,
+        user_name: data.user_name,
         age: data.age,
         sex: data.sex,
         height_cm: data.height_cm,
@@ -210,6 +235,21 @@ export default function Onboarding() {
 
             {step === 2 && (
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={data.user_name || ''}
+                    onChange={(e) => {
+                      const username = e.target.value;
+                      setData({ ...data, user_name: username });
+                      validateUsername(username);
+                    }}
+                    placeholder="Enter your preferred Name"
+                  />
+                  {usernameError && <p className="text-sm text-destructive mt-1">{usernameError}</p>}
+                </div>
                 <div>
                   <Label htmlFor="age">Age</Label>
                   <Input
@@ -431,7 +471,7 @@ export default function Onboarding() {
                   onClick={handleNext}
                   className="flex-1 bg-gradient-cta"
                   disabled={
-                    (step === 2 && (!data.age || !data.sex)) ||
+                    (step === 2 && (!data.user_name || !data.age || !data.sex)) ||
                     (step === 3 && !data.height_cm) ||
                     (step === 4 && !data.weight_kg) ||
                     (step === 5 && !data.goal) ||
