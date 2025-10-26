@@ -1,1 +1,10 @@
-project_id = "txgkydpwdsdaxfzztwyz"
+project_id = "rsjdfnracserzrxrlyzw"
+
+[functions.analyze-nutrition-gemini]
+verify_jwt = false
+
+[functions.analyze-nutrition]
+verify_jwt = false
+
+[functions.check-badges]
+verify_jwt = true
