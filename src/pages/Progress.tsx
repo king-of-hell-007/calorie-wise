@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CalorieProgressBar } from '@/components/CalorieProgressBar';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
 import { TrendingUp, Calendar } from 'lucide-react';
@@ -16,6 +17,7 @@ type DailyData = {
 
 export default function Progress() {
   const [weeklyData, setWeeklyData] = useState<DailyData[]>([]);
+  const [profile, setProfile] = useState<{ target_calories: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +28,15 @@ export default function Progress() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('target_calories')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
 
       const startDate = subDays(new Date(), 6);
       const startDateStr = format(startDate, 'yyyy-MM-dd');
@@ -72,7 +83,6 @@ export default function Progress() {
     }
   };
 
-  const maxCalories = Math.max(...weeklyData.map(d => d.calories), 1);
   const totalWeekCalories = weeklyData.reduce((sum, d) => sum + d.calories, 0);
   const avgDailyCalories = Math.round(totalWeekCalories / 7);
 
@@ -114,9 +124,8 @@ export default function Progress() {
           <CardTitle className="text-lg">Weekly Calories</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {weeklyData.map((day) => {
-              const percentage = (day.calories / maxCalories) * 100;
               const isToday = format(new Date(), 'yyyy-MM-dd') === day.date;
               
               return (
@@ -126,15 +135,9 @@ export default function Progress() {
                       {format(new Date(day.date), 'EEE, MMM d')}
                       {isToday && ' (Today)'}
                     </span>
-                    <span className="font-bold">{day.calories} kcal</span>
                   </div>
-                  <div className="h-8 bg-secondary rounded-lg overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-primary transition-all duration-300"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <CalorieProgressBar calories={day.calories} targetCalories={profile?.target_calories || 2000} />
+                  <div className="flex justify-between text-xs text-muted-foreground pt-1">
                     <span>P: {day.protein.toFixed(2)}g</span>
                     <span>C: {day.carbs.toFixed(2)}g</span>
                     <span>F: {day.fat.toFixed(2)}g</span>
