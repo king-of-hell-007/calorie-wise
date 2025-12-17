@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Zap, Beef, Wheat, Sparkles, Apple, Scale } from 'lucide-react';
+import { ArrowLeft, Zap, Beef, Wheat, Sparkles, Apple, Scale, Check, X } from 'lucide-react';
 
 interface FoodItem {
   name: string;
@@ -13,27 +13,30 @@ interface FoodItem {
 }
 
 interface NutritionData {
-  output: {
-    status: string;
-    food: FoodItem[];
-    total: {
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
+  status: string;
+  food: FoodItem[];
+  total: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
   };
+  suggestions?: Array<{ reason: string; replacement: string }>;
+  flags?: string[];
 }
 
 interface NutritionResultsProps {
   data: NutritionData;
   onReset: () => void;
+  imageUrl?: string;
+  onLogMeal: () => void;
+  onDontLogMeal: () => void;
+  autoLog: boolean;
 }
 
-export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
-  const { output } = data;
-  const { food, total } = output;
-  const { protein, carbs, fat, calories } = total;
+export const NutritionResults = ({ data, onReset, onLogMeal, onDontLogMeal, autoLog }: NutritionResultsProps) => {
+  const { food = [], total, status } = data || {};
+  const { protein = 0, carbs = 0, fat = 0, calories = 0 } = total || {};
 
   const macros = [
     {
@@ -75,7 +78,7 @@ export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
         <div className="text-right">
           <div className="text-sm font-medium text-muted-foreground">Status</div>
           <div className="text-lg font-bold text-primary capitalize">
-            {output.status}
+            {status}
           </div>
         </div>
       </div>
@@ -110,7 +113,7 @@ export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
                 </div>
                 <div>
                   <div className="text-3xl font-bold text-foreground">
-                    {macro.value}
+                    {macro.value.toFixed(2)}
                   </div>
                   <div className="text-sm font-medium text-muted-foreground">
                     {macro.unit} {macro.name}
@@ -147,15 +150,15 @@ export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
                     <div className="text-muted-foreground">cal</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-lg text-blue-600">{item.protein}g</div>
+                    <div className="font-bold text-lg text-blue-600">{item.protein.toFixed(2)}g</div>
                     <div className="text-muted-foreground">protein</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-lg text-orange-600">{item.carbs}g</div>
+                    <div className="font-bold text-lg text-orange-600">{item.carbs.toFixed(2)}g</div>
                     <div className="text-muted-foreground">carbs</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-lg text-yellow-600">{item.fat}g</div>
+                    <div className="font-bold text-lg text-yellow-600">{item.fat.toFixed(2)}g</div>
                     <div className="text-muted-foreground">fat</div>
                   </div>
                 </div>
@@ -164,6 +167,32 @@ export const NutritionResults = ({ data, onReset }: NutritionResultsProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {autoLog ? (
+        <div className="text-center text-muted-foreground">
+          <p>This meal has been automatically logged to your journal.</p>
+        </div>
+      ) : (
+        <div className="flex gap-4">
+          <Button
+            onClick={onLogMeal}
+            size="lg"
+            className="flex-1 bg-gradient-cta text-white"
+          >
+            <Check className="w-5 h-5 mr-2" />
+            Log this Meal
+          </Button>
+          <Button
+            onClick={onDontLogMeal}
+            size="lg"
+            variant="outline"
+            className="flex-1"
+          >
+            <X className="w-5 h-5 mr-2" />
+            Don't Log
+          </Button>
+        </div>
+      )}
 
       {/* CTA to try again */}
       <div className="text-center pt-4">
