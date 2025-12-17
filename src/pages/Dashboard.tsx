@@ -4,6 +4,7 @@ import { Camera, TrendingUp, Target, Flame, Award, Calendar } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { CalorieProgressBar } from '@/components/CalorieProgressBar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MobileNav } from '@/components/MobileNav';
@@ -188,7 +189,6 @@ export default function Dashboard() {
     );
   }
 
-  const calorieProgress = (dailyTotals.calories / profile.target_calories) * 100;
   const proteinProgress = (dailyTotals.protein / profile.protein_g) * 100;
   const carbsProgress = (dailyTotals.carbs / profile.carbs_g) * 100;
   const fatProgress = (dailyTotals.fat / profile.fat_g) * 100;
@@ -226,30 +226,49 @@ export default function Dashboard() {
       {/* Daily Calories */}
       <Card className="shadow-strong border-primary/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <span>Today's Calories</span>
-            <span className="text-sm font-normal text-muted-foreground">
-              {dailyTotals.calories} / {profile.target_calories} kcal
-            </span>
-          </CardTitle>
+          <CardTitle className="text-lg">Today's Calories</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Progress value={Math.min(calorieProgress, 100)} className="h-3" />
-          <div className="grid grid-cols-3 gap-2 text-center text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Protein</p>
-              <p className="font-bold text-primary">{dailyTotals.protein.toFixed(2)}g</p>
-              <Progress value={Math.min(proteinProgress, 100)} className="h-1.5 mt-1" />
+          <CalorieProgressBar
+            calories={dailyTotals.calories}
+            targetCalories={profile.target_calories}
+          />
+          <div className="grid grid-cols-3 gap-4 text-sm pt-2">
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs">Protein</p>
+              <div className="flex justify-between items-baseline">
+                <p className="font-bold text-primary">{dailyTotals.protein.toFixed(2)}g</p>
+                {dailyTotals.protein > profile.protein_g && (
+                  <p className="text-xs text-destructive">
+                    +{(dailyTotals.protein - profile.protein_g).toFixed(0)}g
+                  </p>
+                )}
+              </div>
+              <Progress value={Math.min(proteinProgress, 100)} className="h-1.5" />
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Carbs</p>
-              <p className="font-bold text-orange-600">{dailyTotals.carbs.toFixed(2)}g</p>
-              <Progress value={Math.min(carbsProgress, 100)} className="h-1.5 mt-1" />
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs">Carbs</p>
+              <div className="flex justify-between items-baseline">
+                <p className="font-bold text-orange-600">{dailyTotals.carbs.toFixed(2)}g</p>
+                {dailyTotals.carbs > profile.carbs_g && (
+                  <p className="text-xs text-destructive">
+                    +{(dailyTotals.carbs - profile.carbs_g).toFixed(0)}g
+                  </p>
+                )}
+              </div>
+              <Progress value={Math.min(carbsProgress, 100)} className="h-1.5" />
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Fat</p>
-              <p className="font-bold text-blue-600">{dailyTotals.fat.toFixed(2)}g</p>
-              <Progress value={Math.min(fatProgress, 100)} className="h-1.5 mt-1" />
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs">Fat</p>
+              <div className="flex justify-between items-baseline">
+                <p className="font-bold text-blue-600">{dailyTotals.fat.toFixed(2)}g</p>
+                {dailyTotals.fat > profile.fat_g && (
+                  <p className="text-xs text-destructive">
+                    +{(dailyTotals.fat - profile.fat_g).toFixed(0)}g
+                  </p>
+                )}
+              </div>
+              <Progress value={Math.min(fatProgress, 100)} className="h-1.5" />
             </div>
           </div>
         </CardContent>
