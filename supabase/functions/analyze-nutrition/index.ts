@@ -36,8 +36,8 @@ serve(async (req) => {
     webhookFormData.append('image', blob, filename || 'image.jpg')
 
     // Send to the webhook
-    console.log('Calling webhook:', 'http://34.121.71.147:5678/webhook/Calorie-analysis')
-    const response = await fetch('http://34.121.71.147:5678/webhook/Calorie-analysis', {
+    //console.log('Calling webhook:', 'http://34.121.71.147:5678/webhook/Calorie-analysis')
+    const response = await fetch(Deno.env.get('WEBHOOK_URL'), {
       method: 'POST',  
       body: webhookFormData,
     })
