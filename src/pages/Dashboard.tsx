@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, TrendingUp, Target, Flame, Award, Calendar } from 'lucide-react';
+import { Camera, TrendingUp, Target, Flame, Award, Calendar, BarChart3, BookOpen, ChefHat, Users, Trophy, Droplet, Scan, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -313,6 +313,107 @@ export default function Dashboard() {
               <Award className="w-4 h-4 mr-2" />
               Badges
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Phase 2 Features */}
+      <Card className="shadow-strong">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">✨ New Features</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Analytics & Management */}
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Analytics & Management</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/analytics')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <span className="text-xs">Analytics</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/templates')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <BookOpen className="w-5 h-5 text-green-600" />
+                <span className="text-xs">Templates</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/recipes')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <ChefHat className="w-5 h-5 text-orange-600" />
+                <span className="text-xs">Recipes</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Social & Community */}
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Social & Community</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/friends')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Users className="w-5 h-5 text-purple-600" />
+                <span className="text-xs">Friends</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/leaderboard')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Trophy className="w-5 h-5 text-amber-600" />
+                <span className="text-xs">Leaderboard</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/challenges')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Target className="w-5 h-5 text-red-600" />
+                <span className="text-xs">Challenges</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Smart Tools */}
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Smart Tools</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/water')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Droplet className="w-5 h-5 text-cyan-600" />
+                <span className="text-xs">Water</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/barcode')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Scan className="w-5 h-5 text-indigo-600" />
+                <span className="text-xs">Barcode</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/insights')}
+                className="h-20 flex flex-col gap-1"
+              >
+                <Lightbulb className="w-5 h-5 text-yellow-600" />
+                <span className="text-xs">Insights</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
