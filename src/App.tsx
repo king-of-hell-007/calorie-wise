@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,36 +14,48 @@ import Analyze from "./pages/Analyze";
 import Progress from "./pages/Progress";
 import Badges from "./pages/Badges";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 import { Layout } from "./components/Layout";
+import { applyTheme, getStoredTheme } from "@/lib/themes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-          <Route path="/analyze" element={<Layout><Analyze /></Layout>} />
-          <Route path="/progress" element={<Layout title="Your Progress"><Progress /></Layout>} />
-          <Route path="/badges" element={<Layout title="Your Badges"><Badges /></Layout>} />
-          <Route path="/profile" element={<Layout title="Your Profile"><Profile /></Layout>} />
-          <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<Admin />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  // Initialize theme on app startup
+  useEffect(() => {
+    const storedTheme = getStoredTheme();
+    applyTheme(storedTheme);
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/analyze" element={<Layout><Analyze /></Layout>} />
+            <Route path="/progress" element={<Layout title="Your Progress"><Progress /></Layout>} />
+            <Route path="/badges" element={<Layout title="Your Badges"><Badges /></Layout>} />
+            <Route path="/profile" element={<Layout title="Your Profile"><Profile /></Layout>} />
+            <Route path="/settings" element={<Layout title="Settings"><Settings /></Layout>} />
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<Admin />} />
+            </Route>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
+

@@ -1,73 +1,180 @@
-# Welcome to your Lovable project
+# CalorieWise - AI-Powered Nutrition Tracker
 
-## Project info
+> A self-sufficient mobile-first nutrition tracking app powered by Google Gemini AI
 
-**URL**: https://lovable.dev/projects/fa9146b6-6a8b-41fa-8dfb-573ea7b97d23
+## 🎯 Overview
 
-## How can I edit this code?
+CalorieWise is an intelligent nutrition tracking application that uses AI to analyze food images and provide detailed nutritional information. Simply snap a photo of your meal, and get instant calorie, protein, carbs, and fat breakdowns.
 
-There are several ways of editing your application.
+## ✨ Key Features
 
-**Use Lovable**
+- 📸 **AI-Powered Image Analysis** - Upload food photos for instant nutritional analysis
+- 🎯 **Personalized Goals** - Set and track custom calorie and macro targets
+- 🔥 **Streak Tracking** - Build healthy habits with daily logging streaks
+- 🏆 **Gamification** - Earn badges and points for consistent tracking
+- 📊 **Progress Monitoring** - Visualize your nutrition journey over time
+- 🔄 **API Key Rotation** - Automatic failover for high availability
+- 📱 **Mobile Optimized** - Designed for seamless mobile experience
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/fa9146b6-6a8b-41fa-8dfb-573ea7b97d23) and start prompting.
+## 🚀 Recent Updates (Jan 2026)
 
-Changes made via Lovable will be committed automatically to this repo.
+**Major Architecture Improvement**: CalorieWise is now **fully self-sufficient**! 
 
-**Use your preferred IDE**
+We've eliminated the dependency on n8n by integrating Google Gemini API directly into the app. This means:
+- ✅ No external workflow dependencies
+- ✅ Reduced latency (2-5s vs 3-8s)
+- ✅ Lower hosting costs ($0-25/month vs $10-75/month)
+- ✅ Simpler deployment and maintenance
+- ✅ Built-in API key rotation and failover
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+📖 **Read more**: [N8N_MIGRATION.md](./N8N_MIGRATION.md) | [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🛠️ Tech Stack
 
-Follow these steps:
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn-ui + Tailwind CSS
+- **Backend**: Supabase (Auth, Database, Storage)
+- **AI**: Google Gemini 2.0 Flash (Vision + Text)
+- **Charts**: Recharts
+- **State Management**: React Query
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+## 📋 Prerequisites
+
+- Node.js 18+ and npm
+- Supabase account
+- Google Gemini API key(s) - [Get one here](https://aistudio.google.com/app/apikey)
+
+## 🏁 Quick Start
+
+### 1. Clone and Install
+
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+cd calorie-wise
+npm install
 ```
 
-**Edit a file directly in GitHub**
+### 2. Configure Environment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env` file with your Supabase credentials:
 
-**Use GitHub Codespaces**
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 3. Setup Database
 
-## What technologies are used for this project?
+Apply the database schema and migrations:
 
-This project is built with:
+```bash
+# Using Supabase CLI
+supabase db push
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Or manually run the SQL files in Supabase Dashboard:
+# 1. calorie-wise-database-schema.sql
+# 2. supabase/migrations/20260101_update_api_keys_rls.sql
+```
 
-## How can I deploy this project?
+### 4. Add Gemini API Keys
 
-Simply open [Lovable](https://lovable.dev/projects/fa9146b6-6a8b-41fa-8dfb-573ea7b97d23) and click on Share -> Publish.
+1. Start the dev server: `npm run dev`
+2. Navigate to `/admin`
+3. Add your Gemini API key(s)
+4. Recommended: Add 2-3 keys for automatic failover
 
-## Can I connect a custom domain to my Lovable project?
+### 5. Start Tracking!
 
-Yes, you can!
+Navigate to `/analyze` and upload your first food photo! 🎉
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📚 Documentation
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Complete setup instructions
+- **[N8N_MIGRATION.md](./N8N_MIGRATION.md)** - Migration details and benefits
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Architecture diagrams and comparisons
+- **[SUPABASE_MIGRATION_INSTRUCTIONS.md](./SUPABASE_MIGRATION_INSTRUCTIONS.md)** - Database setup
+
+## 🏗️ Project Structure
+
+```
+calorie-wise/
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── pages/            # Page components (Dashboard, Analyze, etc.)
+│   ├── services/         # Business logic (geminiService, etc.)
+│   ├── integrations/     # Supabase client and types
+│   └── hooks/            # Custom React hooks
+├── supabase/
+│   ├── functions/        # Edge functions (optional)
+│   └── migrations/       # Database migrations
+└── public/               # Static assets
+```
+
+## 🔑 Key Components
+
+- **`src/services/geminiService.ts`** - Direct Gemini API integration with key rotation
+- **`src/pages/Analyze.tsx`** - Image upload and nutrition analysis
+- **`src/pages/Dashboard.tsx`** - Main dashboard with daily stats
+- **`src/pages/Admin.tsx`** - API key management panel
+- **`src/pages/Profile.tsx`** - User profile and settings
+
+## 🎮 Usage
+
+1. **Onboarding**: Set your age, weight, height, activity level, and goals
+2. **Analyze**: Upload food photos to get nutritional data
+3. **Track**: Log meals throughout the day
+4. **Monitor**: View progress on the dashboard
+5. **Earn**: Unlock badges and earn points for consistency
+
+## 🔐 Security
+
+- Row Level Security (RLS) enabled on all tables
+- API keys stored in database (consider encryption for production)
+- Admin-only access for API key management
+- Authenticated users can only access their own data
+
+## 🚀 Deployment
+
+### Deploy to Lovable
+
+Simply open [Lovable](https://lovable.dev/projects/fa9146b6-6a8b-41fa-8dfb-573ea7b97d23) and click on Share → Publish.
+
+### Deploy to Vercel/Netlify
+
+```bash
+npm run build
+# Deploy the dist/ folder
+```
+
+### Environment Variables
+
+Ensure these are set in your deployment platform:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is built with Lovable and uses various open-source libraries.
+
+## 🙏 Acknowledgments
+
+- Google Gemini AI for nutrition analysis
+- Supabase for backend infrastructure
+- shadcn-ui for beautiful components
+- Lovable for rapid development
+
+## 📞 Support
+
+For issues or questions:
+1. Check the documentation files
+2. Review the browser console for errors
+3. Verify API keys are active in `/admin`
+4. Ensure database migrations are applied
+
+---
+
+**Made with ❤️ using Lovable**

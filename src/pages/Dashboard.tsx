@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CalorieProgressBar } from '@/components/CalorieProgressBar';
+import { StreakWidget } from '@/components/StreakWidget';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useStreakNotifications } from '@/hooks/useStreakNotifications';
 import { MobileNav } from '@/components/MobileNav';
 import logo from '@/assets/caloriewise-logo.png';
 
@@ -40,6 +42,9 @@ export default function Dashboard() {
     mealCount: 0
   });
   const [loading, setLoading] = useState(true);
+
+  // Show notifications when features unlock
+  useStreakNotifications(profile?.current_streak_days || 0);
 
   useEffect(() => {
     checkOnboarding();
@@ -109,7 +114,7 @@ export default function Dashboard() {
         console.error('Profile loading error:', error);
         throw error;
       }
-      
+
       console.log('Loaded profile:', data);
       setProfile(data);
     } catch (error: any) {
@@ -223,6 +228,9 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Streak Widget */}
+      <StreakWidget />
+
       {/* Daily Calories */}
       <Card className="shadow-strong border-primary/20">
         <CardHeader className="pb-3">
@@ -232,6 +240,7 @@ export default function Dashboard() {
           <CalorieProgressBar
             calories={dailyTotals.calories}
             targetCalories={profile.target_calories}
+            showColorCoding={true}
           />
           <div className="grid grid-cols-3 gap-4 text-sm pt-2">
             <div className="space-y-1">

@@ -15,7 +15,7 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
   const [isCameraMode, setIsCameraMode] = useState<boolean>(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string>('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,15 +44,15 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
   const startCamera = async () => {
     setCameraError('');
     setIsCameraMode(true);
-    
+
     try {
-      // Enhanced constraints for mobile optimization
+      // Enhanced constraints for mobile optimization with high quality
       const constraints = {
         video: {
           facingMode: 'environment', // Use back camera for food photos
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          aspectRatio: { ideal: 16/9 }
+          width: { ideal: 1920, max: 4096 },  // Higher resolution for better analysis
+          height: { ideal: 1080, max: 4096 },
+          aspectRatio: { ideal: 16 / 9 }
         }
       };
 
@@ -66,21 +66,21 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
           video: { facingMode: 'environment' }
         });
       }
-      
+
       setStream(mediaStream);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         // Ensure video plays on mobile
         videoRef.current.play().catch(console.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Camera access error:', error);
-      const errorMessage = error.name === 'NotAllowedError' 
+      const errorMessage = error.name === 'NotAllowedError'
         ? 'Camera access denied. Please allow camera permissions in your browser settings and refresh the page.'
         : error.name === 'NotFoundError'
-        ? 'No camera found on this device.'
-        : 'Unable to access camera. Please try again or use the upload option.';
+          ? 'No camera found on this device.'
+          : 'Unable to access camera. Please try again or use the upload option.';
       setCameraError(errorMessage);
       setIsCameraMode(false);
     }
@@ -100,26 +100,26 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
-      
+
       if (context) {
-        // Set canvas size to video dimensions for better quality
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-        
+        // Set canvas size to video dimensions for maximum quality
+        canvas.width = video.videoWidth || 1920;
+        canvas.height = video.videoHeight || 1080;
+
         // Draw the video frame to canvas
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert to blob with optimized settings for mobile
+
+        // Convert to blob with high quality for accurate analysis
         canvas.toBlob((blob) => {
           if (blob) {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const file = new File([blob], `camera-capture-${timestamp}.jpg`, { 
-              type: 'image/jpeg' 
+            const file = new File([blob], `camera-capture-${timestamp}.jpg`, {
+              type: 'image/jpeg'
             });
             handleFileSelect(file);
             stopCamera();
           }
-        }, 'image/jpeg', 0.85); // Slightly lower quality for better mobile performance
+        }, 'image/jpeg', 0.95); // High quality (95%) for accurate nutrition analysis
       }
     }
   };
@@ -138,63 +138,71 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
     }
   };
 
-  // Camera view - Mobile optimized
+  // Full-screen camera view for mobile
   if (isCameraMode) {
     return (
-      <div className="w-full max-w-2xl mx-auto px-4 space-y-4">
-        <Card className="overflow-hidden shadow-strong border-primary/20 border-2">
-          <div className="relative bg-black">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-64 sm:h-80 object-cover touch-none"
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            
-            {/* Mobile-friendly camera controls overlay */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+      <div className="fixed inset-0 z-50 bg-black">
+        {/* Full-screen video */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* Camera controls overlay */}
+        <div className="absolute inset-0 flex flex-col">
+          {/* Top bar with close button */}
+          <div className="flex justify-between items-center p-4 bg-gradient-to-b from-black/60 to-transparent">
+            <div className="text-white font-medium">Position your food in frame</div>
+            <Button
+              onClick={stopCamera}
+              size="sm"
+              variant="ghost"
+              className="h-10 w-10 rounded-full p-0 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+
+          {/* Center guidelines (optional) */}
+          <div className="flex-1 flex items-center justify-center pointer-events-none">
+            <div className="border-2 border-white/30 rounded-2xl w-80 h-80 max-w-[90vw] max-h-[50vh]"></div>
+          </div>
+
+          {/* Bottom controls */}
+          <div className="p-6 bg-gradient-to-t from-black/60 to-transparent">
+            <div className="flex items-center justify-center gap-8">
+              {/* Capture button */}
               <Button
                 onClick={capturePhoto}
                 disabled={!!cameraError}
                 size="lg"
-                className="bg-white/90 hover:bg-white text-black font-bold w-16 h-16 rounded-full p-0 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm border-4 border-white/50"
+                className="bg-white hover:bg-white/90 text-black font-bold w-20 h-20 rounded-full p-0 shadow-2xl hover:scale-105 transition-all duration-200 border-4 border-white/50"
               >
-                <Camera className="w-8 h-8" />
+                <Camera className="w-10 h-10" />
               </Button>
             </div>
-            
-            {/* Close button for mobile */}
-            <Button
-              onClick={stopCamera}
-              size="sm"
-              variant="secondary"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full p-0 bg-white/90 hover:bg-white text-black shadow-lg backdrop-blur-sm"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-            
-            {cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4">
-                <div className="text-center text-white max-w-sm">
-                  <p className="text-sm mb-4 leading-relaxed">{cameraError}</p>
-                  <Button onClick={stopCamera} variant="outline" size="sm">
-                    <X className="w-4 h-4 mr-2" />
-                    Close Camera
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Mobile-friendly instruction text */}
-          <div className="p-4 sm:p-6 bg-gradient-card">
-            <p className="text-center text-sm sm:text-base text-muted-foreground">
-              Position your food in the camera view and tap the capture button
+            <p className="text-center text-white/80 text-sm mt-4">
+              Tap to capture • Ensure good lighting for best results
             </p>
           </div>
-        </Card>
+        </div>
+
+        {/* Error overlay */}
+        {cameraError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/90 p-6">
+            <div className="text-center text-white max-w-sm space-y-4">
+              <p className="text-base leading-relaxed">{cameraError}</p>
+              <Button onClick={stopCamera} variant="outline" className="bg-white/10 text-white border-white/30">
+                <X className="w-4 h-4 mr-2" />
+                Close Camera
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -226,7 +234,7 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
             </div>
             <div className="text-center">
               <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed px-2">
-                Capture or upload a photo of your meal for instant, AI-powered nutrition analysis
+                Capture or upload a photo of your meal for instant, AI-powered nutrition analysis with high accuracy
               </p>
             </div>
           </div>
@@ -254,7 +262,7 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
           </div>
           <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gradient-card">
             <p className="text-base sm:text-lg text-muted-foreground text-center leading-relaxed px-2">
-              Perfect! Now let's analyze the nutritional content of your meal.
+              Perfect! Now let's analyze the nutritional content of your meal with high precision.
             </p>
             <Button
               onClick={handleAnalyze}
@@ -282,6 +290,7 @@ export const ImageUpload = ({ onAnalyze, isAnalyzing }: ImageUploadProps) => {
         ref={fileInputRef}
         type="file"
         accept="image/*,image/heic,image/heif"
+        capture="environment"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFileSelect(file);

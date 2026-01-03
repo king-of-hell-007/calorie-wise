@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { MobileNav } from '@/components/MobileNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalorieProgressBar } from '@/components/CalorieProgressBar';
+import { MacroProgressBar } from '@/components/MacroProgressBar';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
 import { TrendingUp, Calendar } from 'lucide-react';
@@ -15,9 +16,16 @@ type DailyData = {
   mealCount: number;
 };
 
+type Profile = {
+  target_calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
 export default function Progress() {
   const [weeklyData, setWeeklyData] = useState<DailyData[]>([]);
-  const [profile, setProfile] = useState<{ target_calories: number } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +39,7 @@ export default function Progress() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('target_calories')
+        .select('target_calories, protein_g, carbs_g, fat_g')
         .eq('id', user.id)
         .single();
 
@@ -51,7 +59,7 @@ export default function Progress() {
 
       // Group by date
       const grouped: { [key: string]: DailyData } = {};
-      
+
       for (let i = 0; i < 7; i++) {
         const date = format(subDays(new Date(), 6 - i), 'yyyy-MM-dd');
         grouped[date] = {
@@ -85,6 +93,16 @@ export default function Progress() {
 
   const totalWeekCalories = weeklyData.reduce((sum, d) => sum + d.calories, 0);
   const avgDailyCalories = Math.round(totalWeekCalories / 7);
+
+  // Calculate weekly totals
+  const totalProtein = weeklyData.reduce((sum, d) => sum + d.protein, 0);
+  const totalCarbs = weeklyData.reduce((sum, d) => sum + d.carbs, 0);
+  const totalFat = weeklyData.reduce((sum, d) => sum + d.fat, 0);
+
+  // Calculate weekly targets (daily target × 7)
+  const weeklyProteinTarget = (profile?.protein_g || 0) * 7;
+  const weeklyCarbsTarget = (profile?.carbs_g || 0) * 7;
+  const weeklyFatTarget = (profile?.fat_g || 0) * 7;
 
   if (loading) {
     return (
@@ -127,7 +145,7 @@ export default function Progress() {
           <div className="space-y-4">
             {weeklyData.map((day) => {
               const isToday = format(new Date(), 'yyyy-MM-dd') === day.date;
-              
+
               return (
                 <div key={day.date} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -150,64 +168,31 @@ export default function Progress() {
         </CardContent>
       </Card>
 
-      {/* Macro Distribution */}
+      {/* Weekly Macro Targets */}
       <Card className="shadow-strong">
         <CardHeader>
-          <CardTitle className="text-lg">Weekly Macro Distribution</CardTitle>
+          <CardTitle className="text-lg">Weekly Macro Targets</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(() => {
-              const totalProtein = weeklyData.reduce((sum, d) => sum + d.protein, 0);
-              const totalCarbs = weeklyData.reduce((sum, d) => sum + d.carbs, 0);
-              const totalFat = weeklyData.reduce((sum, d) => sum + d.fat, 0);
-              const totalGrams = totalProtein + totalCarbs + totalFat;
-
-              const proteinPercent = (totalProtein / totalGrams) * 100;
-              const carbsPercent = (totalCarbs / totalGrams) * 100;
-              const fatPercent = (totalFat / totalGrams) * 100;
-
-              return (
-                <>
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-primary">Protein</span>
-                      <span className="font-bold">{totalProtein.toFixed(2)}g ({proteinPercent.toFixed(0)}%)</span>
-                    </div>
-                    <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${proteinPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-orange-600">Carbs</span>
-                      <span className="font-bold">{totalCarbs.toFixed(2)}g ({carbsPercent.toFixed(0)}%)</span>
-                    </div>
-                    <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-orange-600"
-                        style={{ width: `${carbsPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium text-blue-600">Fat</span>
-                      <span className="font-bold">{totalFat.toFixed(2)}g ({fatPercent.toFixed(0)}%)</span>
-                    </div>
-                    <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-600"
-                        style={{ width: `${fatPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
+            <MacroProgressBar
+              current={totalProtein}
+              target={weeklyProteinTarget}
+              label="Protein"
+              color="primary"
+            />
+            <MacroProgressBar
+              current={totalCarbs}
+              target={weeklyCarbsTarget}
+              label="Carbs"
+              color="orange-600"
+            />
+            <MacroProgressBar
+              current={totalFat}
+              target={weeklyFatTarget}
+              label="Fat"
+              color="blue-600"
+            />
           </div>
         </CardContent>
       </Card>

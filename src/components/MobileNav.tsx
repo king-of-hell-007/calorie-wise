@@ -1,16 +1,16 @@
-import { Home, Camera, TrendingUp, Award, User } from 'lucide-react';
+import { Home, Camera, TrendingUp, Award, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export const MobileNav = () => {
   const location = useLocation();
-  
+
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Home' },
     { path: '/analyze', icon: Camera, label: 'Analyze' },
     { path: '/progress', icon: TrendingUp, label: 'Progress' },
     { path: '/badges', icon: Award, label: 'Badges' },
-    { path: '/profile', icon: User, label: 'Profile' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
@@ -26,8 +26,8 @@ export const MobileNav = () => {
               state={linkState}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-95 touch-manipulation",
-                isActive 
-                  ? "text-primary" 
+                isActive
+                  ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

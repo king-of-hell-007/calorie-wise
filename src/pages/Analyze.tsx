@@ -59,7 +59,7 @@ export default function Analyze() {
       if (!user) throw new Error("User not authenticated");
 
       console.log('Saving meal entry:', data);
-      
+
       const hour = new Date().getHours();
       let mealSlot = 'snack';
       if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
@@ -109,7 +109,7 @@ export default function Analyze() {
         const today = new Date().toISOString().split('T')[0];
         const lastLogDate = profile.last_log_date;
         let newStreak = profile.current_streak_days;
-        
+
         if (!lastLogDate) {
           // First meal ever
           newStreak = 1;
@@ -117,7 +117,7 @@ export default function Analyze() {
           const lastLog = new Date(lastLogDate);
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
-          
+
           if (lastLog.toDateString() === yesterday.toDateString()) {
             // Logged yesterday, continue streak
             newStreak = profile.current_streak_days + 1;
@@ -133,7 +133,7 @@ export default function Analyze() {
         // Update profile
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ 
+          .update({
             total_points: (profile.total_points || 0) + 10,
             current_streak_days: newStreak,
             longest_streak_days: newLongestStreak,
@@ -156,7 +156,7 @@ export default function Analyze() {
       if (badgeData?.newlyUnlocked?.length > 0) {
         const badge = badgeData.newlyUnlocked[0];
         toast({
-          title: `🎉 Badge Unlocked: ${badge.name}!`,          description: `+${badge.points} points earned`,
+          title: `🎉 Badge Unlocked: ${badge.name}!`, description: `+${badge.points} points earned`,
         });
       } else {
         toast({
@@ -190,35 +190,73 @@ export default function Analyze() {
         return;
       }
 
-      // Convert image to base64 for sending to edge function
-      const base64Image = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(imageFile);
-      });
+      // Compress image before sending
+      const compressImage = async (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          const reader = new FileReader();
+
+          reader.onload = (e) => {
+            img.src = e.target?.result as string;
+          };
+
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Max dimension 1024px
+            const MAX_WIDTH = 1024;
+            const MAX_HEIGHT = 1024;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+              if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            // Compress to JPEG 0.7
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+
+          img.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      console.log('Compressing image...');
+      const base64Image = await compressImage(imageFile);
+      console.log(`Compressed size: ~${Math.round(base64Image.length / 1024)}KB`);
 
       setImageUrl(base64Image);
 
-      // Send base64 image to edge function
-      const { data, error } = await supabase.functions.invoke('analyze-nutrition', {
-        body: { 
+      // Call Supabase Edge Function (server-side Gemini API)
+      const { data: analysisData, error: functionError } = await supabase.functions.invoke('analyze-nutrition', {
+        body: {
           image: base64Image,
           filename: imageFile.name,
-          contentType: imageFile.type
-        },
+          contentType: 'image/jpeg'
+        }
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
+      if (functionError) {
+        throw new Error(functionError.message || 'Failed to analyze nutrition');
       }
 
-      console.log('Analysis response:', data);
-      setNutritionData(data);
+      if (!analysisData) {
+        throw new Error('No data returned from analysis');
+      }
 
-      if (autoLog && data?.status === 'success') {
-        await logMeal(data, base64Image);
+      console.log('Analysis response:', analysisData);
+      setNutritionData(analysisData);
+
+      if (autoLog && analysisData?.status === 'success') {
+        await logMeal(analysisData, base64Image);
       }
 
     } catch (error: unknown) {
@@ -254,9 +292,9 @@ export default function Analyze() {
       {!nutritionData ? (
         <ImageUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
       ) : (
-        <NutritionResults 
-          data={nutritionData} 
-          onReset={handleReset} 
+        <NutritionResults
+          data={nutritionData}
+          onReset={handleReset}
           imageUrl={imageUrl}
           onLogMeal={handleLogMeal}
           onDontLogMeal={handleDontLogMeal}
