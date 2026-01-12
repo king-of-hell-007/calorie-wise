@@ -25,9 +25,18 @@ import Badges from "./pages/Badges";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import ActivityFeed from "./pages/ActivityFeed";
+import MealPlanner from "./pages/MealPlanner";
+import NotificationSettings from "./pages/NotificationSettings";
+import RecipeGallery from "./pages/RecipeGallery";
+import FitbitConnect from "./pages/FitbitConnect";
+import FitbitCallback from "./pages/FitbitCallback";
+import Phase3Features from "./pages/Phase3Features";
 
 import { Layout } from "./components/Layout";
 import { applyTheme, getStoredTheme } from "@/lib/themes";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +72,13 @@ function App() {
             <Route path="/badges" element={<Layout title="Your Badges"><Badges /></Layout>} />
             <Route path="/profile" element={<Layout title="Your Profile"><Profile /></Layout>} />
             <Route path="/settings" element={<Layout title="Settings"><Settings /></Layout>} />
+            <Route path="/feed" element={<Layout title="Activity Feed"><ActivityFeed /></Layout>} />
+            <Route path="/planner" element={<Layout title="Meal Planner"><MealPlanner /></Layout>} />
+            <Route path="/notifications" element={<Layout title="Notifications"><NotificationSettings /></Layout>} />
+            <Route path="/recipe-gallery" element={<Layout title="Recipe Gallery"><RecipeGallery /></Layout>} />
+            <Route path="/fitbit" element={<Layout title="Fitbit Integration"><FitbitConnect /></Layout>} />
+            <Route path="/fitbit/callback" element={<FitbitCallback />} />
+            <Route path="/phase3" element={<Layout title="New Features"><Phase3Features /></Layout>} />
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<Admin />} />
             </Route>
@@ -70,10 +86,13 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        <OfflineIndicator />
+        <InstallPrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
 
-export default App;
 
+
+export default App;

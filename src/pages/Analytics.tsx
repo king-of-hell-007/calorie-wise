@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Target, Calendar, Award, Flame } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Calendar, Award, Flame, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { exportAnalyticsToPDF } from '@/lib/exportPDF';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
@@ -24,6 +27,7 @@ interface AnalyticsData {
 
 export default function Analytics() {
     const navigate = useNavigate();
+    const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [timeRange, setTimeRange] = useState<'week' | 'month'>('week');
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -195,11 +199,50 @@ export default function Analytics() {
         );
     }
 
+    const handleExportPDF = async () => {
+        if (!analyticsData || !profile) {
+            toast({ title: 'Error', description: 'No data to export', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const endDate = new Date();
+            const startDate = timeRange === 'week' ? subDays(endDate, 7) : subDays(endDate, 30);
+
+            const { data: meals } = await supabase
+                .from('meal_entries')
+                .select('*')
+                .eq('user_id', user.id)
+                .gte('created_at', startDate.toISOString())
+                .lte('created_at', endDate.toISOString());
+
+            const filename = await exportAnalyticsToPDF({
+                meals: meals || [],
+                profile,
+                dateRange: { start: startDate, end: endDate }
+            });
+
+            toast({ title: 'Success', description: `Exported to ${filename}` });
+        } catch (error) {
+            console.error('Export error:', error);
+            toast({ title: 'Error', description: 'Failed to export PDF', variant: 'destructive' });
+        }
+    };
+
     return (
         <div className="container mx-auto p-4 pb-20 max-w-7xl">
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold mb-2">📊 Analytics Dashboard</h1>
-                <p className="text-muted-foreground">Track your nutrition trends and progress</p>
+            <div className="mb-6 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold mb-2">📊 Analytics Dashboard</h1>
+                    <p className="text-muted-foreground">Track your nutrition trends and progress</p>
+                </div>
+                <Button onClick={handleExportPDF} variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
+                </Button>
             </div>
 
             {/* Time Range Selector */}

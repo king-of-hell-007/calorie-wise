@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -168,7 +168,8 @@ function categorizeError(statusCode: number, errorMessage: string): {
   return { isRateLimit: false, isInvalidKey: false, shouldRetry: true, shouldDeactivate: false };
 }
 
-serve(async (req) => {
+// Use native Deno.serve instead of importing from std
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

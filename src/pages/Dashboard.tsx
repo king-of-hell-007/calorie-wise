@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, TrendingUp, Target, Flame, Award, Calendar, BarChart3, BookOpen, ChefHat, Users, Trophy, Droplet, Scan, Lightbulb } from 'lucide-react';
+import { Camera, TrendingUp, Target, Flame, Award, Calendar, BarChart3, BookOpen, ChefHat, Users, Trophy, Droplet, Scan, Lightbulb, Rss, CalendarDays, Bell, Activity, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -317,6 +317,25 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Phase 3 Features Banner */}
+      <Card className="shadow-strong bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900 border-2 border-purple-400">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-lg mb-1"> Phase 3 is Live!</h3>
+              <p className="text-sm text-muted-foreground">
+                Fitbit, Notifications, Meal Planner, Activity Feed & More
+              </p>
+            </div>
+            <Button 
+              onClick={() => navigate('/phase3')}
+              className="bg-gradient-to-r from-purple-600 to-blue-600"
+            >
+              Explore 
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       {/* Phase 2 Features */}
       <Card className="shadow-strong">
         <CardHeader className="pb-3">

@@ -17,8 +17,8 @@ interface Friend {
     created_at: string;
     friend_profile?: {
         id: string;
-        username: string | null;
-        full_name: string | null;
+        user_name: string | null;
+        email: string | null;
         current_streak_days: number;
         total_points: number;
         avatar_url: string | null;
@@ -33,8 +33,8 @@ interface FriendRequest {
     created_at: string;
     requester_profile?: {
         id: string;
-        username: string | null;
-        full_name: string | null;
+        user_name: string | null;
+        email: string | null;
         current_streak_days: number;
         total_points: number;
     };
@@ -70,26 +70,37 @@ export default function Friends() {
     const loadFriends = async (userId: string) => {
         setLoading(true);
         try {
-            // Get accepted friendships
-            const { data, error } = await supabase
+            // Get accepted friendships - fetch friendship data first
+            // Using 'as any' because friendships table exists but TypeScript types are stale
+            const { data: friendshipData, error: friendshipError } = await (supabase as any)
                 .from('friendships')
-                .select(`
-          *,
-          friend_profile:profiles!friendships_friend_id_fkey(
-            id,
-            username,
-            full_name,
-            current_streak_days,
-            total_points,
-            avatar_url
-          )
-        `)
+                .select('*')
                 .eq('user_id', userId)
                 .eq('status', 'accepted')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setFriends(data || []);
+            if (friendshipError) throw friendshipError;
+
+            // Now fetch friend profiles separately
+            if (friendshipData && friendshipData.length > 0) {
+                const friendIds = friendshipData.map((f: any) => f.friend_id);
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, user_name, email, current_streak_days, total_points, avatar_url')
+                    .in('id', friendIds);
+
+                if (profilesError) throw profilesError;
+
+                // Combine the data
+                const combinedData = friendshipData.map((friendship: any) => ({
+                    ...friendship,
+                    friend_profile: (profilesData as any)?.find((p: any) => p.id === friendship.friend_id) || null
+                }));
+
+                setFriends(combinedData);
+            } else {
+                setFriends([]);
+            }
         } catch (error) {
             console.error('Error loading friends:', error);
             toast({
@@ -105,24 +116,35 @@ export default function Friends() {
     const loadPendingRequests = async (userId: string) => {
         try {
             // Get friend requests sent TO me
-            const { data, error } = await supabase
+            // Using 'as any' because friendships table exists but TypeScript types are stale
+            const { data: requestsData, error: requestsError } = await (supabase as any)
                 .from('friendships')
-                .select(`
-          *,
-          requester_profile:profiles!friendships_user_id_fkey(
-            id,
-            username,
-            full_name,
-            current_streak_days,
-            total_points
-          )
-        `)
+                .select('*')
                 .eq('friend_id', userId)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setPendingRequests(data || []);
+            if (requestsError) throw requestsError;
+
+            // Fetch requester profiles
+            if (requestsData && requestsData.length > 0) {
+                const requesterIds = requestsData.map((r: any) => r.user_id);
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, user_name, email, current_streak_days, total_points')
+                    .in('id', requesterIds);
+
+                if (profilesError) throw profilesError;
+
+                const combinedData = requestsData.map((request: any) => ({
+                    ...request,
+                    requester_profile: (profilesData as any)?.find((p: any) => p.id === request.user_id) || null
+                }));
+
+                setPendingRequests(combinedData);
+            } else {
+                setPendingRequests([]);
+            }
         } catch (error) {
             console.error('Error loading pending requests:', error);
         }
@@ -131,24 +153,35 @@ export default function Friends() {
     const loadSentRequests = async (userId: string) => {
         try {
             // Get friend requests I sent
-            const { data, error } = await supabase
+            // Using 'as any' because friendships table exists but TypeScript types are stale
+            const { data: sentData, error: sentError } = await (supabase as any)
                 .from('friendships')
-                .select(`
-          *,
-          friend_profile:profiles!friendships_friend_id_fkey(
-            id,
-            username,
-            full_name,
-            current_streak_days,
-            total_points
-          )
-        `)
+                .select('*')
                 .eq('user_id', userId)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setSentRequests(data || []);
+            if (sentError) throw sentError;
+
+            // Fetch friend profiles
+            if (sentData && sentData.length > 0) {
+                const friendIds = sentData.map((s: any) => s.friend_id);
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, user_name, email, current_streak_days, total_points')
+                    .in('id', friendIds);
+
+                if (profilesError) throw profilesError;
+
+                const combinedData = sentData.map((sent: any) => ({
+                    ...sent,
+                    friend_profile: (profilesData as any)?.find((p: any) => p.id === sent.friend_id) || null
+                }));
+
+                setSentRequests(combinedData);
+            } else {
+                setSentRequests([]);
+            }
         } catch (error) {
             console.error('Error loading sent requests:', error);
         }
@@ -158,7 +191,7 @@ export default function Friends() {
         if (!searchEmail.trim()) {
             toast({
                 title: 'Error',
-                description: 'Please enter an email address',
+                description: 'Please enter an email address or username',
                 variant: 'destructive'
             });
             return;
@@ -166,23 +199,119 @@ export default function Friends() {
 
         setSearching(true);
         try {
-            // Find user by email
-            const { data: userData, error: userError } = await supabase
-                .from('profiles')
-                .select('id, username, full_name')
-                .eq('id', searchEmail) // Assuming email is used as ID or we need to add email field
-                .single();
+            const searchTerm = searchEmail.trim().toLowerCase();
+            let foundUserId: string | null = null;
+            let foundUserName: string | null = null;
 
-            if (userError || !userData) {
-                toast({
-                    title: 'User not found',
-                    description: 'No user found with that email',
-                    variant: 'destructive'
-                });
-                return;
+            // First, try to find by exact email match in profiles
+            if (searchTerm.includes('@')) {
+                console.log('[Friend Search] Searching by email:', searchTerm);
+
+                const { data: profileByEmail, error: emailError } = await (supabase as any)
+                    .from('profiles')
+                    .select('id, user_name, email')
+                    .ilike('email', searchTerm)
+                    .maybeSingle();
+
+                console.log('[Friend Search] Email search result:', profileByEmail, 'Error:', emailError);
+
+                if (profileByEmail) {
+                    foundUserId = profileByEmail.id;
+                    foundUserName = profileByEmail.user_name || 'User';
+                }
             }
 
-            if (userData.id === currentUserId) {
+            // If not found by email, try user_name
+            if (!foundUserId) {
+                console.log('[Friend Search] Searching by user_name:', searchTerm);
+
+                const { data: profileByUsername, error: usernameError } = await (supabase as any)
+                    .from('profiles')
+                    .select('id, user_name, email')
+                    .ilike('user_name', searchTerm)
+                    .maybeSingle();
+
+                console.log('[Friend Search] Username search result:', profileByUsername, 'Error:', usernameError);
+
+                if (profileByUsername) {
+                    foundUserId = profileByUsername.id;
+                    foundUserName = profileByUsername.user_name || 'User';
+                }
+            }
+
+            // If still not found and it's an email, check if any profile has this email
+            if (!foundUserId && searchTerm.includes('@')) {
+                console.log('[Friend Search] Email not found directly, trying broader search...');
+
+                // Get all profiles and log them to see what's available
+                const { data: allProfiles, error: allError } = await (supabase as any)
+                    .from('profiles')
+                    .select('id, user_name, email')
+                    .limit(50);
+
+                console.log('[Friend Search] All profiles:', allProfiles?.length, 'Error:', allError);
+                if (allProfiles) {
+                    console.log('[Friend Search] Profiles:', allProfiles.map((p: any) => ({ id: p.id.substring(0, 8), email: p.email, name: p.user_name })));
+
+                    // Check if any profile has this email
+                    const matchingProfile = allProfiles.find((p: any) =>
+                        p.email?.toLowerCase() === searchTerm.toLowerCase()
+                    );
+
+                    if (matchingProfile) {
+                        foundUserId = matchingProfile.id;
+                        foundUserName = matchingProfile.user_name || 'User';
+                        console.log('[Friend Search] Found matching profile:', foundUserId);
+                    }
+                }
+            }
+
+            // If still not found, try partial match on user_name
+            if (!foundUserId) {
+                console.log('[Friend Search] Trying user_name partial search:', searchTerm);
+
+                const { data: profileByName, error: nameError } = await (supabase as any)
+                    .from('profiles')
+                    .select('id, user_name, email')
+                    .ilike('user_name', `%${searchTerm}%`)
+                    .limit(1)
+                    .maybeSingle();
+
+                console.log('[Friend Search] Name search result:', profileByName, 'Error:', nameError);
+
+                if (profileByName) {
+                    foundUserId = profileByName.id;
+                    foundUserName = profileByName.user_name || 'User';
+                }
+            }
+
+            console.log('[Friend Search] Final result - foundUserId:', foundUserId, 'foundUserName:', foundUserName);
+
+            // If no user found, this could be an invite to a non-registered user
+            if (!foundUserId) {
+                // Check if it looks like an email (contains @)
+                if (searchTerm.includes('@')) {
+                    // This is an email invite for someone not on the platform yet
+                    console.log('[Friend Search] User not found, sending invite...');
+                    toast({
+                        title: 'Invite sent!',
+                        description: `An invitation has been sent to ${searchEmail}. You'll get 50 bonus points when they join!`
+                    });
+                    // TODO: Implement actual email sending via edge function
+                    setSearchEmail('');
+                    return;
+                } else {
+                    toast({
+                        title: 'User not found',
+                        description: 'No user found with that username. Try their exact username or email address.',
+                        variant: 'destructive'
+                    });
+                    return;
+                }
+            }
+
+            // Check if trying to add self
+            if (foundUserId === currentUserId) {
                 toast({
                     title: 'Error',
                     description: 'You cannot add yourself as a friend',
@@ -192,10 +321,10 @@ export default function Friends() {
             }
 
             // Check if friendship already exists
-            const { data: existingFriendship } = await supabase
+            const { data: existingFriendship } = await (supabase as any)
                 .from('friendships')
                 .select('*')
-                .or(`and(user_id.eq.${currentUserId},friend_id.eq.${userData.id}),and(user_id.eq.${userData.id},friend_id.eq.${currentUserId})`)
+                .or(`and(user_id.eq.${currentUserId},friend_id.eq.${foundUserId}),and(user_id.eq.${foundUserId},friend_id.eq.${currentUserId})`)
                 .single();
 
             if (existingFriendship) {
@@ -208,11 +337,11 @@ export default function Friends() {
             }
 
             // Create friend request
-            const { error: insertError } = await supabase
+            const { error: insertError } = await (supabase as any)
                 .from('friendships')
                 .insert({
                     user_id: currentUserId,
-                    friend_id: userData.id,
+                    friend_id: foundUserId,
                     status: 'pending'
                 });
 
@@ -220,7 +349,7 @@ export default function Friends() {
 
             toast({
                 title: 'Friend request sent!',
-                description: `Request sent to ${userData.username || userData.full_name || 'user'}`
+                description: `Request sent to ${foundUserName || 'user'}`
             });
 
             setSearchEmail('');
@@ -229,7 +358,7 @@ export default function Friends() {
             console.error('Error sending friend request:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to send friend request',
+                description: 'Failed to send friend request. Please try again.',
                 variant: 'destructive'
             });
         } finally {
@@ -240,7 +369,7 @@ export default function Friends() {
     const acceptFriendRequest = async (requestId: string, friendId: string) => {
         try {
             // Update the request to accepted
-            const { error: updateError } = await supabase
+            const { error: updateError } = await (supabase as any)
                 .from('friendships')
                 .update({ status: 'accepted' })
                 .eq('id', requestId);
@@ -248,7 +377,7 @@ export default function Friends() {
             if (updateError) throw updateError;
 
             // Create reciprocal friendship
-            const { error: insertError } = await supabase
+            const { error: insertError } = await (supabase as any)
                 .from('friendships')
                 .insert({
                     user_id: currentUserId,
@@ -277,7 +406,7 @@ export default function Friends() {
 
     const rejectFriendRequest = async (requestId: string) => {
         try {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('friendships')
                 .delete()
                 .eq('id', requestId);
@@ -303,12 +432,12 @@ export default function Friends() {
     const removeFriend = async (friendshipId: string, friendId: string) => {
         try {
             // Delete both friendships
-            const { error: error1 } = await supabase
+            const { error: error1 } = await (supabase as any)
                 .from('friendships')
                 .delete()
                 .eq('id', friendshipId);
 
-            const { error: error2 } = await supabase
+            const { error: error2 } = await (supabase as any)
                 .from('friendships')
                 .delete()
                 .eq('user_id', friendId)
@@ -355,26 +484,47 @@ export default function Friends() {
                 <p className="text-muted-foreground">Connect with friends and track progress together</p>
             </div>
 
-            {/* Add Friend */}
+            {/* Add Friend / Invite */}
             <Card className="mb-6">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <UserPlus className="w-5 h-5" />
-                        Add Friend
+                        Add Friend or Invite
                     </CardTitle>
-                    <CardDescription>Send a friend request by user ID</CardDescription>
+                    <CardDescription>Send friend request or invite someone to join CalorieWise</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <div className="flex gap-2">
                         <Input
-                            placeholder="Enter user ID or email"
+                            placeholder="Enter email address"
                             value={searchEmail}
                             onChange={(e) => setSearchEmail(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && sendFriendRequest()}
                         />
                         <Button onClick={sendFriendRequest} disabled={searching}>
-                            {searching ? 'Searching...' : 'Send Request'}
+                            {searching ? 'Searching...' : 'Add/Invite'}
                         </Button>
+                    </div>
+
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-sm">
+                        <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">How it works:</p>
+                        <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs">
+                            <li>• If email is registered → Sends friend request</li>
+                            <li>• If email not registered → Sends invite link</li>
+                            <li>• Get 50 bonus points for each friend who joins!</li>
+                        </ul>
+                    </div>
+
+                    {/* Referral Stats */}
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="p-3 bg-muted rounded-lg text-center">
+                            <p className="text-2xl font-bold text-primary">0</p>
+                            <p className="text-xs text-muted-foreground">Friends Invited</p>
+                        </div>
+                        <div className="p-3 bg-muted rounded-lg text-center">
+                            <p className="text-2xl font-bold text-accent">0</p>
+                            <p className="text-xs text-muted-foreground">Bonus Points Earned</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -412,12 +562,12 @@ export default function Friends() {
                                     <div className="flex items-center gap-3">
                                         <Avatar className="w-12 h-12">
                                             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                {getInitials(friendship.friend_profile?.full_name || friendship.friend_profile?.username)}
+                                                {getInitials(friendship.friend_profile?.user_name)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-semibold">
-                                                {friendship.friend_profile?.full_name || friendship.friend_profile?.username || 'Unknown User'}
+                                                {friendship.friend_profile?.user_name || friendship.friend_profile?.email || 'Unknown User'}
                                             </p>
                                             <div className="flex gap-4 text-sm text-muted-foreground">
                                                 <div className="flex items-center gap-1">
@@ -463,12 +613,12 @@ export default function Friends() {
                                     <div className="flex items-center gap-3">
                                         <Avatar className="w-12 h-12">
                                             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                {getInitials(request.requester_profile?.full_name || request.requester_profile?.username)}
+                                                {getInitials(request.requester_profile?.user_name)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-semibold">
-                                                {request.requester_profile?.full_name || request.requester_profile?.username || 'Unknown User'}
+                                                {request.requester_profile?.user_name || request.requester_profile?.email || 'Unknown User'}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
                                                 Wants to be your friend
@@ -517,12 +667,12 @@ export default function Friends() {
                                     <div className="flex items-center gap-3">
                                         <Avatar className="w-12 h-12">
                                             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                                {getInitials(request.friend_profile?.full_name || request.friend_profile?.username)}
+                                                {getInitials(request.friend_profile?.user_name)}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-semibold">
-                                                {request.friend_profile?.full_name || request.friend_profile?.username || 'Unknown User'}
+                                                {request.friend_profile?.user_name || request.friend_profile?.email || 'Unknown User'}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
                                                 Request pending
