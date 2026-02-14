@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Users, Check, X, Flame, Trophy, TrendingUp } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { logger } from '@/lib/logger';
+import { RateLimiter } from '@/lib/validation';
 
 interface Friend {
     id: string;
@@ -320,12 +322,18 @@ export default function Friends() {
                 return;
             }
 
-            // Check if friendship already exists
-            const { data: existingFriendship } = await (supabase as any)
+            // Check if friendship already exists (using safe parameterized queries)
+            const { data: existingFriendships } = await (supabase as any)
                 .from('friendships')
                 .select('*')
-                .or(`and(user_id.eq.${currentUserId},friend_id.eq.${foundUserId}),and(user_id.eq.${foundUserId},friend_id.eq.${currentUserId})`)
-                .single();
+                .in('user_id', [currentUserId, foundUserId])
+                .in('friend_id', [currentUserId, foundUserId]);
+
+            // Check if any friendship exists between these users
+            const existingFriendship = existingFriendships?.find((f: any) =>
+                (f.user_id === currentUserId && f.friend_id === foundUserId) ||
+                (f.user_id === foundUserId && f.friend_id === currentUserId)
+            );
 
             if (existingFriendship) {
                 toast({

@@ -8,21 +8,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, Plus, Trash2, ShoppingCart, ChefHat, BookOpen } from 'lucide-react';
 import { format, startOfWeek, addDays } from 'date-fns';
 
-interface MealPlanItem {
+interface MealPlanEntry {
     id: string;
-    day_of_week: number;
+    plan_date: string;
     meal_slot: string;
     recipe_id?: string;
-    template_id?: string;
-    custom_meal?: any;
+    meal_template_id?: string;
     notes?: string;
-    recipe?: {
-        name: string;
-        servings: number;
-    };
-    template?: {
-        name: string;
-    };
+    recipe_name?: string;
+    recipe_servings?: number;
+    template_name?: string;
 }
 
 interface ShoppingListItem {
@@ -39,16 +34,23 @@ export default function MealPlanner() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string>('');
-    const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-    const [mealPlanItems, setMealPlanItems] = useState<MealPlanItem[]>([]);
+    const [mealPlanEntries, setMealPlanEntries] = useState<MealPlanEntry[]>([]);
     const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
     const [recipes, setRecipes] = useState<any[]>([]);
     const [templates, setTemplates] = useState<any[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<{ day: number; slot: string } | null>(null);
+    const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
+    const [addingMeal, setAddingMeal] = useState(false);
 
     useEffect(() => {
         checkAuth();
     }, []);
+
+    useEffect(() => {
+        if (currentUserId) {
+            loadMealPlan(currentUserId);
+        }
+    }, [weekStart]);
 
     const checkAuth = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -65,49 +67,68 @@ export default function MealPlanner() {
     const loadMealPlan = async (userId: string) => {
         setLoading(true);
         try {
-            // Get or create current week's meal plan
-            const weekStart = startOfWeek(new Date());
+            const weekEnd = addDays(weekStart, 6);
+            const startStr = format(weekStart, 'yyyy-MM-dd');
+            const endStr = format(weekEnd, 'yyyy-MM-dd');
 
-            let { data: plan, error: planError } = await supabase
-                .from('meal_plans')
+            // Query meal_plan_entries (the scheduling table, NOT meal_plans which is nutrition targets)
+            const { data, error } = await (supabase as any)
+                .from('meal_plan_entries')
                 .select('*')
                 .eq('user_id', userId)
-                .eq('week_start_date', format(weekStart, 'yyyy-MM-dd'))
-                .single();
+                .gte('plan_date', startStr)
+                .lte('plan_date', endStr);
 
-            if (planError && planError.code !== 'PGRST116') throw planError;
+            if (error) throw error;
 
-            if (!plan) {
-                // Create new plan for this week
-                const { data: newPlan, error: createError } = await supabase
-                    .from('meal_plans')
-                    .insert({
-                        user_id: userId,
-                        week_start_date: format(weekStart, 'yyyy-MM-dd'),
-                        name: `Week of ${format(weekStart, 'MMM d, yyyy')}`
-                    })
-                    .select()
-                    .single();
-
-                if (createError) throw createError;
-                plan = newPlan;
+            if (!data || data.length === 0) {
+                setMealPlanEntries([]);
+                setLoading(false);
+                return;
             }
 
-            setCurrentPlanId(plan.id);
+            // Collect unique recipe and template IDs for batch fetching
+            const recipeIds = data.filter((r: any) => r.recipe_id).map((r: any) => r.recipe_id);
+            const templateIds = data.filter((r: any) => r.meal_template_id).map((r: any) => r.meal_template_id);
 
-            // Load meal plan items
-            const { data: items, error: itemsError } = await supabase
-                .from('meal_plan_items')
-                .select(`
-          *,
-          recipe:recipes(name, servings),
-          template:meal_templates(name)
-        `)
-                .eq('meal_plan_id', plan.id);
+            // Batch fetch recipe names
+            let recipeMap: Record<string, any> = {};
+            if (recipeIds.length > 0) {
+                const { data: recipesData } = await (supabase as any)
+                    .from('recipes')
+                    .select('id, name, servings')
+                    .in('id', recipeIds);
+                recipesData?.forEach((r: any) => {
+                    recipeMap[r.id] = r;
+                });
+            }
 
-            if (itemsError) throw itemsError;
+            // Batch fetch template names
+            let templateMap: Record<string, any> = {};
+            if (templateIds.length > 0) {
+                const { data: templatesData } = await (supabase as any)
+                    .from('meal_templates')
+                    .select('id, name')
+                    .in('id', templateIds);
+                templatesData?.forEach((t: any) => {
+                    templateMap[t.id] = t;
+                });
+            }
 
-            setMealPlanItems(items || []);
+            // Enrich entries
+            const entries: MealPlanEntry[] = data.map((row: any) => ({
+                id: row.id,
+                plan_date: row.plan_date,
+                meal_slot: row.meal_slot,
+                recipe_id: row.recipe_id,
+                meal_template_id: row.meal_template_id,
+                notes: row.notes,
+                recipe_name: row.recipe_id ? recipeMap[row.recipe_id]?.name : undefined,
+                recipe_servings: row.recipe_id ? recipeMap[row.recipe_id]?.servings : undefined,
+                template_name: row.meal_template_id ? templateMap[row.meal_template_id]?.name : undefined,
+            }));
+
+            setMealPlanEntries(entries);
         } catch (error) {
             console.error('Error loading meal plan:', error);
             toast({
@@ -122,7 +143,7 @@ export default function MealPlanner() {
 
     const loadRecipes = async (userId: string) => {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('recipes')
                 .select('id, name, servings')
                 .eq('user_id', userId)
@@ -138,7 +159,7 @@ export default function MealPlanner() {
 
     const loadTemplates = async (userId: string) => {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('meal_templates')
                 .select('id, name, meal_slot')
                 .eq('user_id', userId)
@@ -153,19 +174,46 @@ export default function MealPlanner() {
     };
 
     const addRecipeToSlot = async (recipeId: string) => {
-        if (!selectedSlot || !currentPlanId) return;
+        if (!selectedSlot || addingMeal) return;
+        setAddingMeal(true);
 
         try {
-            const { error } = await supabase
-                .from('meal_plan_items')
-                .insert({
-                    meal_plan_id: currentPlanId,
-                    day_of_week: selectedSlot.day,
-                    meal_slot: selectedSlot.slot,
-                    recipe_id: recipeId
-                });
+            const planDate = format(addDays(weekStart, selectedSlot.day), 'yyyy-MM-dd');
 
-            if (error) throw error;
+            // Check if an entry already exists for this slot
+            const { data: existing } = await (supabase as any)
+                .from('meal_plan_entries')
+                .select('id')
+                .eq('user_id', currentUserId)
+                .eq('plan_date', planDate)
+                .eq('meal_slot', selectedSlot.slot)
+                .maybeSingle();
+
+            if (existing) {
+                // Update existing entry
+                const { error } = await (supabase as any)
+                    .from('meal_plan_entries')
+                    .update({
+                        recipe_id: recipeId,
+                        meal_template_id: null
+                    })
+                    .eq('id', existing.id);
+
+                if (error) throw error;
+            } else {
+                // Insert new entry
+                const { error } = await (supabase as any)
+                    .from('meal_plan_entries')
+                    .insert({
+                        user_id: currentUserId,
+                        plan_date: planDate,
+                        meal_slot: selectedSlot.slot,
+                        recipe_id: recipeId,
+                        meal_template_id: null
+                    });
+
+                if (error) throw error;
+            }
 
             toast({
                 title: 'Recipe added',
@@ -173,31 +221,60 @@ export default function MealPlanner() {
             });
 
             setSelectedSlot(null);
-            loadMealPlan(currentUserId);
+            await loadMealPlan(currentUserId);
         } catch (error) {
             console.error('Error adding recipe:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to add recipe',
+                description: 'Failed to add recipe to meal plan',
                 variant: 'destructive'
             });
+        } finally {
+            setAddingMeal(false);
         }
     };
 
     const addTemplateToSlot = async (templateId: string) => {
-        if (!selectedSlot || !currentPlanId) return;
+        if (!selectedSlot || addingMeal) return;
+        setAddingMeal(true);
 
         try {
-            const { error } = await supabase
-                .from('meal_plan_items')
-                .insert({
-                    meal_plan_id: currentPlanId,
-                    day_of_week: selectedSlot.day,
-                    meal_slot: selectedSlot.slot,
-                    template_id: templateId
-                });
+            const planDate = format(addDays(weekStart, selectedSlot.day), 'yyyy-MM-dd');
 
-            if (error) throw error;
+            // Check if an entry already exists for this slot
+            const { data: existing } = await (supabase as any)
+                .from('meal_plan_entries')
+                .select('id')
+                .eq('user_id', currentUserId)
+                .eq('plan_date', planDate)
+                .eq('meal_slot', selectedSlot.slot)
+                .maybeSingle();
+
+            if (existing) {
+                // Update existing entry
+                const { error } = await (supabase as any)
+                    .from('meal_plan_entries')
+                    .update({
+                        recipe_id: null,
+                        meal_template_id: templateId
+                    })
+                    .eq('id', existing.id);
+
+                if (error) throw error;
+            } else {
+                // Insert new entry
+                const { error } = await (supabase as any)
+                    .from('meal_plan_entries')
+                    .insert({
+                        user_id: currentUserId,
+                        plan_date: planDate,
+                        meal_slot: selectedSlot.slot,
+                        recipe_id: null,
+                        meal_template_id: templateId
+                    });
+
+                if (error) throw error;
+            }
 
             toast({
                 title: 'Template added',
@@ -205,23 +282,25 @@ export default function MealPlanner() {
             });
 
             setSelectedSlot(null);
-            loadMealPlan(currentUserId);
+            await loadMealPlan(currentUserId);
         } catch (error) {
             console.error('Error adding template:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to add template',
+                description: 'Failed to add template to meal plan',
                 variant: 'destructive'
             });
+        } finally {
+            setAddingMeal(false);
         }
     };
 
-    const removeMealItem = async (itemId: string) => {
+    const removeMealEntry = async (entryId: string) => {
         try {
-            const { error } = await supabase
-                .from('meal_plan_items')
+            const { error } = await (supabase as any)
+                .from('meal_plan_entries')
                 .delete()
-                .eq('id', itemId);
+                .eq('id', entryId);
 
             if (error) throw error;
 
@@ -230,9 +309,9 @@ export default function MealPlanner() {
                 description: 'Meal removed from plan'
             });
 
-            loadMealPlan(currentUserId);
+            await loadMealPlan(currentUserId);
         } catch (error) {
-            console.error('Error removing item:', error);
+            console.error('Error removing meal:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to remove meal',
@@ -242,14 +321,19 @@ export default function MealPlanner() {
     };
 
     const generateShoppingList = () => {
-        // Simple shopping list generation from recipes
         const items: ShoppingListItem[] = [];
 
-        mealPlanItems.forEach(item => {
-            if (item.recipe) {
+        mealPlanEntries.forEach(entry => {
+            if (entry.recipe_name) {
                 items.push({
-                    ingredient: `Ingredients for ${item.recipe.name}`,
-                    quantity: `${item.recipe.servings} servings`,
+                    ingredient: `Ingredients for ${entry.recipe_name}`,
+                    quantity: `${entry.recipe_servings || 1} servings`,
+                    checked: false
+                });
+            } else if (entry.template_name) {
+                items.push({
+                    ingredient: `Ingredients for ${entry.template_name}`,
+                    quantity: '1 serving',
                     checked: false
                 });
             }
@@ -263,10 +347,15 @@ export default function MealPlanner() {
         });
     };
 
-    const getMealForSlot = (day: number, slot: string) => {
-        return mealPlanItems.find(
-            item => item.day_of_week === day && item.meal_slot === slot
+    const getMealForSlot = (dayIndex: number, slot: string): MealPlanEntry | undefined => {
+        const targetDate = format(addDays(weekStart, dayIndex), 'yyyy-MM-dd');
+        return mealPlanEntries.find(
+            entry => entry.plan_date === targetDate && entry.meal_slot === slot
         );
+    };
+
+    const navigateWeek = (direction: number) => {
+        setWeekStart(prev => addDays(prev, direction * 7));
     };
 
     if (loading) {
@@ -287,18 +376,30 @@ export default function MealPlanner() {
                     <h1 className="text-3xl font-bold mb-2">📅 Meal Planner</h1>
                     <p className="text-muted-foreground">Plan your weekly meals</p>
                 </div>
-                <Button onClick={generateShoppingList} variant="outline">
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Generate Shopping List
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={() => navigateWeek(-1)} variant="outline" size="sm">
+                        ← Prev Week
+                    </Button>
+                    <Button onClick={() => setWeekStart(startOfWeek(new Date()))} variant="outline" size="sm">
+                        Today
+                    </Button>
+                    <Button onClick={() => navigateWeek(1)} variant="outline" size="sm">
+                        Next Week →
+                    </Button>
+                    <Button onClick={generateShoppingList} variant="outline" size="sm">
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Shopping List
+                    </Button>
+                </div>
             </div>
 
             {/* Weekly Calendar */}
             <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
                 {DAYS.map((day, dayIndex) => {
-                    const date = addDays(startOfWeek(new Date()), dayIndex);
+                    const date = addDays(weekStart, dayIndex);
+                    const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
                     return (
-                        <Card key={day} className="overflow-hidden">
+                        <Card key={day} className={`overflow-hidden ${isToday ? 'border-primary border-2' : ''}`}>
                             <CardHeader className="pb-3 bg-muted/50">
                                 <CardTitle className="text-sm">{day}</CardTitle>
                                 <CardDescription className="text-xs">
@@ -319,15 +420,15 @@ export default function MealPlanner() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-6 w-6"
-                                                        onClick={() => removeMealItem(meal.id)}
+                                                        onClick={() => removeMealEntry(meal.id)}
                                                     >
                                                         <Trash2 className="w-3 h-3" />
                                                     </Button>
                                                 )}
                                             </div>
                                             {meal ? (
-                                                <div className="text-xs">
-                                                    {meal.recipe?.name || meal.template?.name || 'Custom meal'}
+                                                <div className="text-xs font-medium">
+                                                    {meal.recipe_name || meal.template_name || 'Custom meal'}
                                                 </div>
                                             ) : (
                                                 <Button
@@ -349,7 +450,7 @@ export default function MealPlanner() {
                 })}
             </div>
 
-            {/* Add Meal Dialog */}
+            {/* Add Meal Panel */}
             {selectedSlot && (
                 <Card className="mb-6 border-primary">
                     <CardHeader>
@@ -379,6 +480,7 @@ export default function MealPlanner() {
                                             variant="outline"
                                             className="h-auto py-2 text-left justify-start"
                                             onClick={() => addRecipeToSlot(recipe.id)}
+                                            disabled={addingMeal}
                                         >
                                             <div className="truncate text-xs">{recipe.name}</div>
                                         </Button>
@@ -405,6 +507,7 @@ export default function MealPlanner() {
                                             variant="outline"
                                             className="h-auto py-2 text-left justify-start"
                                             onClick={() => addTemplateToSlot(template.id)}
+                                            disabled={addingMeal}
                                         >
                                             <div className="truncate text-xs">{template.name}</div>
                                         </Button>

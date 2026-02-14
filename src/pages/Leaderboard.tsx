@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface LeaderboardEntry {
     id: string;
-    username: string | null;
+    user_name: string | null;
     full_name: string | null;
     current_streak_days: number;
     total_points: number;
@@ -82,9 +82,9 @@ export default function Leaderboard() {
                 return;
             }
 
-            const { data: profiles } = await supabase
+            const { data: profiles } = await (supabase as any)
                 .from('profiles')
-                .select('id, username, full_name, avatar_url, current_streak_days')
+                .select('id, user_name, full_name, avatar_url, current_streak_days')
                 .in('id', userIds);
 
             const leaders = profiles?.map(profile => ({
@@ -128,9 +128,9 @@ export default function Leaderboard() {
                 return;
             }
 
-            const { data: profiles } = await supabase
+            const { data: profiles } = await (supabase as any)
                 .from('profiles')
-                .select('id, username, full_name, avatar_url, current_streak_days')
+                .select('id, user_name, full_name, avatar_url, current_streak_days')
                 .in('id', userIds);
 
             const leaders = profiles?.map(profile => ({
@@ -150,9 +150,9 @@ export default function Leaderboard() {
 
     const loadAllTimeLeaders = async (userId: string) => {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('profiles')
-                .select('id, username, full_name, avatar_url, current_streak_days, total_points')
+                .select('id, user_name, full_name, avatar_url, current_streak_days, total_points')
                 .order('total_points', { ascending: false })
                 .limit(50);
 
@@ -173,7 +173,7 @@ export default function Leaderboard() {
     const loadFriendsLeaders = async (userId: string) => {
         try {
             // Get friend IDs
-            const { data: friendships } = await supabase
+            const { data: friendships } = await (supabase as any)
                 .from('friendships')
                 .select('friend_id')
                 .eq('user_id', userId)
@@ -183,9 +183,9 @@ export default function Leaderboard() {
 
             if (friendIds.length === 0) {
                 // Include only current user
-                const { data: currentUser } = await supabase
+                const { data: currentUser } = await (supabase as any)
                     .from('profiles')
-                    .select('id, username, full_name, avatar_url, current_streak_days, total_points')
+                    .select('id, user_name, full_name, avatar_url, current_streak_days, total_points')
                     .eq('id', userId)
                     .single();
 
@@ -198,9 +198,9 @@ export default function Leaderboard() {
             // Include current user in the list
             friendIds.push(userId);
 
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('profiles')
-                .select('id, username, full_name, avatar_url, current_streak_days, total_points')
+                .select('id, user_name, full_name, avatar_url, current_streak_days, total_points')
                 .in('id', friendIds)
                 .order('total_points', { ascending: false });
 
@@ -263,12 +263,12 @@ export default function Leaderboard() {
                                 </div>
                                 <Avatar className="w-12 h-12">
                                     <AvatarFallback className={`font-semibold ${entry.is_current_user ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
-                                        {getInitials(entry.full_name || entry.username)}
+                                        {getInitials(entry.full_name || entry.user_name)}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                     <p className="font-semibold">
-                                        {entry.full_name || entry.username || 'Unknown User'}
+                                        {entry.full_name || entry.user_name || 'Unknown User'}
                                         {entry.is_current_user && (
                                             <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-1 rounded">You</span>
                                         )}

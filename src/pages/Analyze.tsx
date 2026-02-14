@@ -4,6 +4,7 @@ import { NutritionResults } from '@/components/NutritionResults';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getMealSlot, POINTS } from '@/lib/constants';
 
 type NutritionData = {
   status: string;
@@ -58,13 +59,8 @@ export default function Analyze() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      console.log('Saving meal entry:', data);
-
       const hour = new Date().getHours();
-      let mealSlot = 'snack';
-      if (hour >= 6 && hour < 11) mealSlot = 'breakfast';
-      else if (hour >= 11 && hour < 15) mealSlot = 'lunch';
-      else if (hour >= 15 && hour < 21) mealSlot = 'dinner';
+      const mealSlot = getMealSlot(hour);
 
       // Insert meal entry
       const { error: mealError } = await supabase.from('meal_entries').insert([{
@@ -87,12 +83,12 @@ export default function Analyze() {
       // Award points
       const { error: pointsError } = await supabase.from('points_history').insert({
         user_id: user.id,
-        points: 10,
+        points: POINTS.MEAL_LOGGED,
         reason: 'Logged a meal'
       });
 
       if (pointsError) {
-        console.error('Error saving points:', pointsError);
+        // Error logging points - non-critical
       }
 
       // Update total points and streak
@@ -103,7 +99,7 @@ export default function Analyze() {
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        // Error fetching profile - non-critical
       } else if (profile) {
         // Calculate streak
         const today = new Date().toISOString().split('T')[0];
@@ -134,7 +130,7 @@ export default function Analyze() {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
-            total_points: (profile.total_points || 0) + 10,
+            total_points: (profile.total_points || 0) + POINTS.MEAL_LOGGED,
             current_streak_days: newStreak,
             longest_streak_days: newLongestStreak,
             last_log_date: today
@@ -142,7 +138,7 @@ export default function Analyze() {
           .eq('id', user.id);
 
         if (updateError) {
-          console.error('Error updating profile:', updateError);
+          // Error updating profile - non-critical
         }
       }
 

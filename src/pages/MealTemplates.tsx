@@ -71,7 +71,7 @@ export default function MealTemplates() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('meal_templates')
                 .select('*')
                 .eq('user_id', user.id)
@@ -97,7 +97,7 @@ export default function MealTemplates() {
             if (!user) return;
 
             // Get most recent meal
-            const { data: recentMeal } = await supabase
+            const { data: recentMeal } = await (supabase as any)
                 .from('meal_entries')
                 .select('*')
                 .eq('user_id', user.id)
@@ -115,7 +115,7 @@ export default function MealTemplates() {
             }
 
             // Create template from recent meal
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('meal_templates')
                 .insert({
                     user_id: user.id,
@@ -158,7 +158,7 @@ export default function MealTemplates() {
             if (!user) return;
 
             // Insert meal entry
-            const { error: mealError } = await supabase
+            const { error: mealError } = await (supabase as any)
                 .from('meal_entries')
                 .insert({
                     user_id: user.id,
@@ -174,14 +174,14 @@ export default function MealTemplates() {
             if (mealError) throw mealError;
 
             // Award points
-            await supabase.from('points_history').insert({
+            await (supabase as any).from('points_history').insert({
                 user_id: user.id,
                 points: 10,
                 reason: 'Logged a meal from template'
             });
 
             // Update template use count
-            await supabase
+            await (supabase as any)
                 .from('meal_templates')
                 .update({ use_count: template.use_count + 1 })
                 .eq('id', template.id);
@@ -204,7 +204,7 @@ export default function MealTemplates() {
 
     const deleteTemplate = async (id: string) => {
         try {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('meal_templates')
                 .delete()
                 .eq('id', id);

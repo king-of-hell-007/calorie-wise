@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, ChefHat, Clock, Users } from 'lucide-react';
+import { Plus, Trash2, Edit, ChefHat, Clock, Users, Globe, Lock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface Recipe {
     id: string;
@@ -19,6 +20,7 @@ interface Recipe {
     cook_time_minutes: number | null;
     instructions: string | null;
     tags: string[] | null;
+    is_public: boolean;
     created_at: string;
     ingredients?: RecipeIngredient[];
 }
@@ -63,6 +65,7 @@ export default function Recipes() {
     const [ingredients, setIngredients] = useState<NewIngredient[]>([
         { ingredient_name: '', quantity: '', unit: '', calories: '', protein: '', carbs: '', fat: '' }
     ]);
+    const [shareToGallery, setShareToGallery] = useState(false);
 
     useEffect(() => {
         checkAuth();
@@ -143,6 +146,7 @@ export default function Recipes() {
         setPrepTime('');
         setCookTime('');
         setInstructions('');
+        setShareToGallery(false);
         setIngredients([
             { ingredient_name: '', quantity: '', unit: '', calories: '', protein: '', carbs: '', fat: '' }
         ]);
@@ -172,7 +176,8 @@ export default function Recipes() {
                     servings: parseInt(servings) || 1,
                     prep_time_minutes: prepTime ? parseInt(prepTime) : null,
                     cook_time_minutes: cookTime ? parseInt(cookTime) : null,
-                    instructions: instructions || null
+                    instructions: instructions || null,
+                    is_public: shareToGallery
                 })
                 .select()
                 .single();
@@ -239,6 +244,34 @@ export default function Recipes() {
             toast({
                 title: 'Error',
                 description: 'Failed to delete recipe',
+                variant: 'destructive'
+            });
+        }
+    };
+
+    const toggleRecipeShare = async (recipe: Recipe) => {
+        try {
+            const newIsPublic = !recipe.is_public;
+            const { error } = await (supabase as any)
+                .from('recipes')
+                .update({ is_public: newIsPublic })
+                .eq('id', recipe.id);
+
+            if (error) throw error;
+
+            toast({
+                title: newIsPublic ? 'Shared to Gallery!' : 'Removed from Gallery',
+                description: newIsPublic
+                    ? 'Your recipe is now visible in the Recipe Gallery'
+                    : 'Your recipe is now private'
+            });
+
+            loadRecipes();
+        } catch (error) {
+            console.error('Error toggling recipe share:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update recipe visibility',
                 variant: 'destructive'
             });
         }
@@ -432,6 +465,23 @@ export default function Recipes() {
                             />
                         </div>
 
+                        {/* Share to Gallery Toggle */}
+                        <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium flex items-center gap-2">
+                                    <Globe className="w-4 h-4 text-blue-500" />
+                                    Share to Recipe Gallery
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Make this recipe visible to other users in the community gallery
+                                </p>
+                            </div>
+                            <Switch
+                                checked={shareToGallery}
+                                onCheckedChange={setShareToGallery}
+                            />
+                        </div>
+
                         <Button onClick={createRecipe} className="w-full">
                             Create Recipe
                         </Button>
@@ -484,13 +534,27 @@ export default function Recipes() {
                                                 )}
                                             </div>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => deleteRecipe(recipe.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4 text-destructive" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => toggleRecipeShare(recipe)}
+                                                title={recipe.is_public ? 'Remove from Gallery' : 'Share to Gallery'}
+                                            >
+                                                {recipe.is_public ? (
+                                                    <Globe className="w-4 h-4 text-blue-500" />
+                                                ) : (
+                                                    <Lock className="w-4 h-4 text-muted-foreground" />
+                                                )}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => deleteRecipe(recipe.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4 text-destructive" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>

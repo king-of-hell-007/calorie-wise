@@ -46,19 +46,19 @@ export default function Profile() {
       if (!user) return;
 
       const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
       if (profileError) throw profileError;
 
       const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
 
       if (roleError) throw roleError;
       setProfile({ ...profileData, is_admin: !!roleData });
@@ -73,7 +73,7 @@ export default function Profile() {
     }
   };
 
-  
+
 
   if (loading) {
     return (
@@ -258,7 +258,7 @@ export default function Profile() {
             Admin Settings
           </Button>
         )}
-        
+
       </div>
     </>
   );

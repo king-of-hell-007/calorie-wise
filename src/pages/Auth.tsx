@@ -8,14 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { validateEmail, validatePassword } from '@/lib/validation';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" {...props}>
-  <path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.6-117.4 81.6-201.1z"/>
-  <path fill="#34A853" d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26.6-92.7 26.6-71.7 0-131.5-48-153.4-112.2H28.9v70.2c46.2 91.3 140.1 153.9 243.2 153.9z"/>
-  <path fill="#FBBC05" d="M118.4 329.3c-11.1-33.8-11.1-70.6 0-104.3V154.8H28.9c-37.9 79.2-37.9 171.5 0 250.7l89.5-70.2z"/>
-  <path fill="#EA4335" d="M272.1 107.7c38.8-0.1 76.9 14.1 105.2 41.9l77.4-77.4c-47.8-45.4-115.2-73.1-182.6-73.1C140.1 0 46.2 62.6 0 153.9l89.5 70.2c21.9-64.2 81.7-112.2 153.4-112.2z"/>
-</svg>
+    <path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.6-117.4 81.6-201.1z" />
+    <path fill="#34A853" d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26.6-92.7 26.6-71.7 0-131.5-48-153.4-112.2H28.9v70.2c46.2 91.3 140.1 153.9 243.2 153.9z" />
+    <path fill="#FBBC05" d="M118.4 329.3c-11.1-33.8-11.1-70.6 0-104.3V154.8H28.9c-37.9 79.2-37.9 171.5 0 250.7l89.5-70.2z" />
+    <path fill="#EA4335" d="M272.1 107.7c38.8-0.1 76.9 14.1 105.2 41.9l77.4-77.4c-47.8-45.4-115.2-73.1-182.6-73.1C140.1 0 46.2 62.6 0 153.9l89.5 70.2c21.9-64.2 81.7-112.2 153.4-112.2z" />
+  </svg>
 );
 
 export default function Auth() {
@@ -59,11 +60,33 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate email
+    if (!validateEmail(email)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      toast({
+        title: 'Weak Password',
+        description: passwordValidation.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`
@@ -90,14 +113,14 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     const redirectTo = window.location.hostname === "localhost"
-    ? import.meta.env.VITE_REDIRECT_URL_LOCALHOST
-    : import.meta.env.VITE_REDIRECT_URL_PROD
+      ? import.meta.env.VITE_REDIRECT_URL_LOCALHOST
+      : import.meta.env.VITE_REDIRECT_URL_PROD
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-         // redirectTo: `${window.location.origin}/`,
-         redirectTo
+          // redirectTo: `${window.location.origin}/`,
+          redirectTo
         },
       });
 
@@ -116,11 +139,22 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate email
+    if (!validateEmail(email)) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -210,13 +244,16 @@ export default function Auth() {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="••••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={12}
                     disabled={loading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Must be at least 12 characters with uppercase, lowercase, number, and special character
+                  </p>
                 </div>
                 <Button type="submit" className="w-full bg-gradient-cta" disabled={loading}>
                   {loading ? (

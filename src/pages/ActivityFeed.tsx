@@ -18,7 +18,7 @@ interface ActivityItem {
     image_url: string | null;
     created_at: string;
     user_profile?: {
-        username: string | null;
+        user_name: string | null;
         full_name: string | null;
         avatar_url: string | null;
     };
@@ -33,7 +33,7 @@ interface Comment {
     comment_text: string;
     created_at: string;
     user_profile?: {
-        username: string | null;
+        user_name: string | null;
         full_name: string | null;
     };
 }
@@ -65,13 +65,72 @@ export default function ActivityFeed() {
     const loadActivityFeed = async (userId: string) => {
         setLoading(true);
         try {
-            // Get activity feed with user profiles
-            const { data, error } = await supabase
-                .rpc('get_user_feed', { target_user_id: userId, limit_count: 50 });
+            // Get activity feed items (own + friends' public activities)
+            const { data: feedData, error: feedError } = await (supabase as any)
+                .from('activity_feed')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
 
-            if (error) throw error;
+            if (feedError) throw feedError;
 
-            setActivities(data || []);
+            if (!feedData || feedData.length === 0) {
+                setActivities([]);
+                setLoading(false);
+                return;
+            }
+
+            // Get unique user IDs from feed
+            const userIds = [...new Set(feedData.map((item: any) => item.user_id))] as string[];
+
+            // Batch fetch profiles
+            const { data: profiles } = await (supabase as any)
+                .from('profiles')
+                .select('id, user_name, full_name, avatar_url')
+                .in('id', userIds);
+
+            const profileMap: Record<string, any> = {};
+            profiles?.forEach((p: any) => {
+                profileMap[p.id] = p;
+            });
+
+            // Get reaction counts for all feed items
+            const feedIds = feedData.map((item: any) => item.id);
+            const { data: reactions } = await (supabase as any)
+                .from('feed_reactions')
+                .select('feed_id, user_id')
+                .in('feed_id', feedIds);
+
+            const reactionCounts: Record<string, number> = {};
+            const userReactions: Record<string, boolean> = {};
+            reactions?.forEach((r: any) => {
+                reactionCounts[r.feed_id] = (reactionCounts[r.feed_id] || 0) + 1;
+                if (r.user_id === userId) {
+                    userReactions[r.feed_id] = true;
+                }
+            });
+
+            // Get comment counts
+            const { data: commentData } = await (supabase as any)
+                .from('feed_comments')
+                .select('feed_id')
+                .in('feed_id', feedIds);
+
+            const commentCounts: Record<string, number> = {};
+            commentData?.forEach((c: any) => {
+                commentCounts[c.feed_id] = (commentCounts[c.feed_id] || 0) + 1;
+            });
+
+            // Merge everything
+            const enrichedActivities: ActivityItem[] = feedData.map((item: any) => ({
+                ...item,
+                user_profile: profileMap[item.user_id] || null,
+                reaction_count: reactionCounts[item.id] || 0,
+                comment_count: commentCounts[item.id] || 0,
+                user_reacted: userReactions[item.id] || false
+            }));
+
+            setActivities(enrichedActivities);
         } catch (error) {
             console.error('Error loading activity feed:', error);
             toast({
@@ -86,20 +145,34 @@ export default function ActivityFeed() {
 
     const loadComments = async (activityId: string) => {
         try {
-            const { data, error } = await supabase
+            const { data: commentData, error } = await (supabase as any)
                 .from('feed_comments')
-                .select(`
-          *,
-          user_profile:profiles!feed_comments_user_id_fkey(username, full_name)
-        `)
+                .select('*')
                 .eq('feed_id', activityId)
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
 
+            // Fetch profiles for commenters
+            const userIds = [...new Set((commentData || []).map((c: any) => c.user_id))] as string[];
+            const { data: profiles } = await (supabase as any)
+                .from('profiles')
+                .select('id, user_name, full_name')
+                .in('id', userIds);
+
+            const profileMap: Record<string, any> = {};
+            profiles?.forEach((p: any) => {
+                profileMap[p.id] = p;
+            });
+
+            const enrichedComments = (commentData || []).map((c: any) => ({
+                ...c,
+                user_profile: profileMap[c.user_id] || null
+            }));
+
             setComments(prev => ({
                 ...prev,
-                [activityId]: data || []
+                [activityId]: enrichedComments
             }));
         } catch (error) {
             console.error('Error loading comments:', error);
@@ -109,8 +182,7 @@ export default function ActivityFeed() {
     const toggleReaction = async (activityId: string, currentlyReacted: boolean) => {
         try {
             if (currentlyReacted) {
-                // Remove reaction
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('feed_reactions')
                     .delete()
                     .eq('feed_id', activityId)
@@ -118,8 +190,7 @@ export default function ActivityFeed() {
 
                 if (error) throw error;
             } else {
-                // Add reaction
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('feed_reactions')
                     .insert({
                         feed_id: activityId,
@@ -130,7 +201,6 @@ export default function ActivityFeed() {
                 if (error) throw error;
             }
 
-            // Reload feed
             loadActivityFeed(currentUserId);
         } catch (error) {
             console.error('Error toggling reaction:', error);
@@ -146,7 +216,7 @@ export default function ActivityFeed() {
         if (!newComment.trim()) return;
 
         try {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('feed_comments')
                 .insert({
                     feed_id: activityId,
@@ -182,9 +252,9 @@ export default function ActivityFeed() {
                 return <Award className="w-5 h-5" />;
             case 'challenge_completed':
                 return <Trophy className="w-5 h-5" />;
-            case 'streak_milestone':
+            case 'streak_achieved':
                 return <Flame className="w-5 h-5" />;
-            case 'recipe_created':
+            case 'recipe_shared':
                 return <ChefHat className="w-5 h-5" />;
             default:
                 return <Trophy className="w-5 h-5" />;
@@ -192,23 +262,27 @@ export default function ActivityFeed() {
     };
 
     const getActivityTitle = (activity: ActivityItem) => {
-        const username = activity.user_profile?.username || activity.user_profile?.full_name || 'Someone';
+        const displayName = activity.user_profile?.user_name || activity.user_profile?.full_name || 'Someone';
 
         switch (activity.activity_type) {
             case 'meal_logged':
-                return `${username} logged a meal`;
+                return `${displayName} logged a meal`;
             case 'badge_earned':
-                return `${username} earned a badge`;
+                return `${displayName} earned a badge`;
             case 'challenge_completed':
-                return `${username} completed a challenge`;
-            case 'streak_milestone':
-                return `${username} reached a streak milestone`;
-            case 'recipe_created':
-                return `${username} created a new recipe`;
-            case 'goal_achieved':
-                return `${username} achieved a goal`;
+                return `${displayName} completed a challenge`;
+            case 'challenge_joined':
+                return `${displayName} joined a challenge`;
+            case 'streak_achieved':
+                return `${displayName} reached a streak milestone`;
+            case 'recipe_shared':
+                return `${displayName} shared a recipe`;
+            case 'water_goal_met':
+                return `${displayName} met their water goal`;
+            case 'milestone':
+                return `${displayName} achieved a milestone`;
             default:
-                return `${username} posted an update`;
+                return `${displayName} posted an update`;
         }
     };
 
@@ -267,7 +341,7 @@ export default function ActivityFeed() {
                                 <div className="flex items-start gap-3">
                                     <Avatar className="w-10 h-10">
                                         <AvatarFallback>
-                                            {(activity.user_profile?.username || activity.user_profile?.full_name || 'U')[0].toUpperCase()}
+                                            {(activity.user_profile?.user_name || activity.user_profile?.full_name || 'U')[0].toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
@@ -339,12 +413,12 @@ export default function ActivityFeed() {
                                             <div key={comment.id} className="flex gap-2">
                                                 <Avatar className="w-8 h-8">
                                                     <AvatarFallback className="text-xs">
-                                                        {(comment.user_profile?.username || 'U')[0].toUpperCase()}
+                                                        {(comment.user_profile?.user_name || 'U')[0].toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1 bg-muted rounded-lg p-2">
                                                     <p className="text-xs font-semibold">
-                                                        {comment.user_profile?.username || comment.user_profile?.full_name || 'User'}
+                                                        {comment.user_profile?.user_name || comment.user_profile?.full_name || 'User'}
                                                     </p>
                                                     <p className="text-sm">{comment.comment_text}</p>
                                                     <p className="text-xs text-muted-foreground mt-1">

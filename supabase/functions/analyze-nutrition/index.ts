@@ -1,10 +1,26 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3?target=deno';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS (security improvement)
+const ALLOWED_ORIGINS = [
+  'https://your-production-domain.com', // Replace with your actual domain
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[1]; // Default to localhost for dev
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
 };
+
+const corsHeaders = getCorsHeaders(null); // Default headers
 
 // Advanced system prompt for Gemini 2.5 Flash
 const ANALYZER_SYSTEM_PROMPT = `You are an expert nutritionist and computer vision specialist with advanced training in food recognition, portion estimation, and nutritional analysis. Your task is to analyze food images with exceptional accuracy by considering:
@@ -171,8 +187,11 @@ function categorizeError(statusCode: number, errorMessage: string): {
 // Use native Deno.serve instead of importing from std
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
+  const origin = req.headers.get('origin');
+  const requestCorsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: requestCorsHeaders });
   }
 
   try {
@@ -185,10 +204,44 @@ Deno.serve(async (req) => {
     // Get request body
     const { image, filename, contentType } = await req.json();
 
+    // Validate image presence
     if (!image) {
       return new Response(
         JSON.stringify({ error: 'No image provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate content type
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (contentType && !ALLOWED_TYPES.includes(contentType)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid image format. Only JPEG, PNG, and WebP are allowed.' }),
+        { status: 400, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extract and validate base64 data
+    const base64Data = image.includes(',') ? image.split(',')[1] : image;
+
+    // Validate base64 format
+    try {
+      // Test if it's valid base64
+      const testDecode = atob(base64Data.substring(0, 100));
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid image encoding' }),
+        { status: 400, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate size (max 10MB)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const sizeInBytes = (base64Data.length * 3) / 4;
+    if (sizeInBytes > MAX_SIZE) {
+      return new Response(
+        JSON.stringify({ error: 'Image too large. Maximum size is 10MB.' }),
+        { status: 413, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -218,8 +271,7 @@ Deno.serve(async (req) => {
     console.log(`[KEY ROTATION] Found ${apiKeys.length} active API keys`);
     console.log(`[KEY ROTATION] Key order: ${apiKeys.map((k: GeminiAPIKey) => `${k.key_name} (errors: ${k.error_count}, usage: ${k.usage_count})`).join(', ')}`);
 
-    // Extract base64 image data
-    const base64Data = image.includes(',') ? image.split(',')[1] : image;
+    // base64Data already extracted and validated above
 
     let lastError: Error | null = null;
     let lastErrorCategory = null;
@@ -234,112 +286,127 @@ Deno.serve(async (req) => {
         console.log(`[KEY ${i + 1}/${apiKeys.length}] Attempting analysis with key: ${apiKey.key_name}`);
 
         // Call Gemini API with 2.5 Flash model
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.key_value}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: `${ANALYZER_SYSTEM_PROMPT}\n\n${ANALYZER_USER_INSTRUCTIONS}`
-                    },
-                    {
-                      inline_data: {
-                        mime_type: contentType || 'image/jpeg',
-                        data: base64Data
+        // Security: Use AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        try {
+          const geminiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+            {
+              method: 'POST',
+              signal: controller.signal,
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey.key_value, // Security: API key in header, not URL
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `${ANALYZER_SYSTEM_PROMPT}\n\n${ANALYZER_USER_INSTRUCTIONS}`
+                      },
+                      {
+                        inline_data: {
+                          mime_type: contentType || 'image/jpeg',
+                          data: base64Data
+                        }
                       }
-                    }
-                  ]
+                    ]
+                  }
+                ],
+                generationConfig: {
+                  temperature: 0.3,
+                  topK: 32,
+                  topP: 0.95,
+                  maxOutputTokens: 4096,
                 }
-              ],
-              generationConfig: {
-                temperature: 0.3,
-                topK: 32,
-                topP: 0.95,
-                maxOutputTokens: 4096,
-              }
-            })
+              })
+            }
+          );
+
+          if (!geminiResponse.ok) {
+            const errorText = await geminiResponse.text();
+            const errorCategory = categorizeError(geminiResponse.status, errorText);
+
+            console.error(`[KEY ${i + 1}/${apiKeys.length}] Gemini API error (${geminiResponse.status}):`, errorText);
+            console.error(`[KEY ${i + 1}/${apiKeys.length}] Error category:`, errorCategory);
+
+            // Update error count
+            await supabaseAdmin
+              .from('admin_api_keys')
+              .update({
+                error_count: apiKey.error_count + 1,
+                last_error_at: new Date().toISOString()
+              })
+              .eq('id', apiKey.id);
+
+            // Auto-deactivate key if it's invalid
+            if (errorCategory.shouldDeactivate) {
+              console.warn(`[KEY ${i + 1}/${apiKeys.length}] Auto-deactivating invalid key: ${apiKey.key_name}`);
+              await supabaseAdmin
+                .from('admin_api_keys')
+                .update({ is_active: false })
+                .eq('id', apiKey.id);
+            }
+
+            lastErrorCategory = errorCategory;
+            throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
           }
-        );
 
-        if (!geminiResponse.ok) {
-          const errorText = await geminiResponse.text();
-          const errorCategory = categorizeError(geminiResponse.status, errorText);
+          const geminiData = await geminiResponse.json();
 
-          console.error(`[KEY ${i + 1}/${apiKeys.length}] Gemini API error (${geminiResponse.status}):`, errorText);
-          console.error(`[KEY ${i + 1}/${apiKeys.length}] Error category:`, errorCategory);
+          // Extract text from Gemini response
+          const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!generatedText) {
+            throw new Error('No text content in Gemini response');
+          }
 
-          // Update error count
+          // Parse JSON from the response (remove markdown code blocks if present)
+          let cleanedText = generatedText.trim();
+          if (cleanedText.startsWith('```json')) {
+            cleanedText = cleanedText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+          } else if (cleanedText.startsWith('```')) {
+            cleanedText = cleanedText.replace(/```\n?/g, '');
+          }
+
+          analysisResult = JSON.parse(cleanedText);
+
+          // Update successful usage stats
           await supabaseAdmin
             .from('admin_api_keys')
             .update({
-              error_count: apiKey.error_count + 1,
-              last_error_at: new Date().toISOString()
+              usage_count: apiKey.usage_count + 1,
+              last_used_at: new Date().toISOString()
             })
             .eq('id', apiKey.id);
 
-          // Auto-deactivate key if it's invalid
-          if (errorCategory.shouldDeactivate) {
-            console.warn(`[KEY ${i + 1}/${apiKeys.length}] Auto-deactivating invalid key: ${apiKey.key_name}`);
-            await supabaseAdmin
-              .from('admin_api_keys')
-              .update({ is_active: false })
-              .eq('id', apiKey.id);
+          successfulKeyName = apiKey.key_name;
+          console.log(`[SUCCESS] Analysis completed with key: ${apiKey.key_name}`);
+          console.log(`[SUCCESS] Key stats - Usage: ${apiKey.usage_count + 1}, Errors: ${apiKey.error_count}`);
+          break; // Success! Exit the loop
+
+        } catch (error) {
+          console.error(`[KEY ${i + 1}/${apiKeys.length}] Error with key ${apiKey.key_name}:`, error);
+          lastError = error instanceof Error ? error : new Error(String(error));
+
+          // If this is the last key, we'll throw the error
+          if (i === apiKeys.length - 1) {
+            console.error(`[FAILURE] All ${apiKeys.length} API keys failed`);
+          } else {
+            console.log(`[RETRY] Trying next key (${i + 2}/${apiKeys.length})...`);
           }
 
-          lastErrorCategory = errorCategory;
-          throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
+          continue; // Try next key
+        } finally {
+          clearTimeout(timeoutId); // Clear timeout in all cases
         }
-
-        const geminiData = await geminiResponse.json();
-
-        // Extract text from Gemini response
-        const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!generatedText) {
-          throw new Error('No text content in Gemini response');
-        }
-
-        // Parse JSON from the response (remove markdown code blocks if present)
-        let cleanedText = generatedText.trim();
-        if (cleanedText.startsWith('```json')) {
-          cleanedText = cleanedText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        } else if (cleanedText.startsWith('```')) {
-          cleanedText = cleanedText.replace(/```\n?/g, '');
-        }
-
-        analysisResult = JSON.parse(cleanedText);
-
-        // Update successful usage stats
-        await supabaseAdmin
-          .from('admin_api_keys')
-          .update({
-            usage_count: apiKey.usage_count + 1,
-            last_used_at: new Date().toISOString()
-          })
-          .eq('id', apiKey.id);
-
-        successfulKeyName = apiKey.key_name;
-        console.log(`[SUCCESS] Analysis completed with key: ${apiKey.key_name}`);
-        console.log(`[SUCCESS] Key stats - Usage: ${apiKey.usage_count + 1}, Errors: ${apiKey.error_count}`);
-        break; // Success! Exit the loop
-
-      } catch (error) {
-        console.error(`[KEY ${i + 1}/${apiKeys.length}] Error with key ${apiKey.key_name}:`, error);
-        lastError = error instanceof Error ? error : new Error(String(error));
-
-        // If this is the last key, we'll throw the error
-        if (i === apiKeys.length - 1) {
-          console.error(`[FAILURE] All ${apiKeys.length} API keys failed`);
-        } else {
-          console.log(`[RETRY] Trying next key (${i + 2}/${apiKeys.length})...`);
-        }
-
-        continue; // Try next key
+      } catch (outerError) {
+        // Catch errors from the outer try block
+        console.error(`[KEY ${i + 1}/${apiKeys.length}] Outer error:`, outerError);
+        lastError = outerError instanceof Error ? outerError : new Error(String(outerError));
+        continue;
       }
     }
 

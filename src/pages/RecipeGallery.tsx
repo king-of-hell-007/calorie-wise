@@ -59,40 +59,88 @@ export default function RecipeGallery() {
     const loadRecipes = async (userId: string) => {
         setLoading(true);
         try {
-            // Get public recipes with ratings
-            const { data, error } = await supabase
+            // Get the user's own recipes AND public recipes from others
+            const { data, error } = await (supabase as any)
                 .from('recipes')
-                .select(`
-          *,
-          user_profile:profiles!recipes_user_id_fkey(username, full_name)
-        `)
-                .eq('is_public', true)
+                .select('*')
+                .or(`user_id.eq.${userId},is_public.eq.true`)
                 .order('created_at', { ascending: false })
                 .limit(50);
 
             if (error) throw error;
 
-            // Get ratings for each recipe
-            const recipesWithRatings = await Promise.all(
+            // Get user profiles and ratings for each recipe
+            const recipesWithDetails = await Promise.all(
                 (data || []).map(async (recipe) => {
-                    const { data: reviews } = await supabase
-                        .from('recipe_reviews')
-                        .select('rating')
-                        .eq('recipe_id', recipe.id);
+                    // Get profile info
+                    const { data: profileData } = await supabase
+                        .from('profiles')
+                        .select('user_name, full_name')
+                        .eq('id', recipe.user_id)
+                        .single();
 
-                    const avgRating = reviews && reviews.length > 0
-                        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-                        : 0;
+                    // Get ratings
+                    let avgRating = 0;
+                    let reviewCount = 0;
+                    try {
+                        const { data: reviews } = await supabase
+                            .from('recipe_reviews')
+                            .select('rating')
+                            .eq('recipe_id', recipe.id);
+
+                        if (reviews && reviews.length > 0) {
+                            avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+                            reviewCount = reviews.length;
+                        }
+                    } catch {
+                        // recipe_reviews table may not exist yet, continue gracefully
+                    }
+
+                    // Calculate nutrition from ingredients if not stored
+                    let nutritionPerServing = recipe.nutrition_per_serving;
+                    if (!nutritionPerServing) {
+                        try {
+                            const { data: ingredients } = await supabase
+                                .from('recipe_ingredients')
+                                .select('calories, protein, carbs, fat')
+                                .eq('recipe_id', recipe.id);
+
+                            if (ingredients && ingredients.length > 0) {
+                                const totals = ingredients.reduce((acc, ing) => ({
+                                    calories: acc.calories + (ing.calories || 0),
+                                    protein: acc.protein + (Number(ing.protein) || 0),
+                                    carbs: acc.carbs + (Number(ing.carbs) || 0),
+                                    fat: acc.fat + (Number(ing.fat) || 0),
+                                }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+                                const servings = recipe.servings || 1;
+                                nutritionPerServing = {
+                                    calories: totals.calories / servings,
+                                    protein: totals.protein / servings,
+                                    carbs: totals.carbs / servings,
+                                    fat: totals.fat / servings,
+                                };
+                            }
+                        } catch {
+                            // Continue without nutrition data
+                        }
+                    }
 
                     return {
                         ...recipe,
+                        nutrition_per_serving: nutritionPerServing,
+                        user_profile: {
+                            username: profileData?.user_name || null,
+                            full_name: profileData?.full_name || null,
+                        },
                         avg_rating: avgRating,
-                        review_count: reviews?.length || 0
+                        review_count: reviewCount,
+                        is_own: recipe.user_id === userId,
                     };
                 })
             );
 
-            setRecipes(recipesWithRatings);
+            setRecipes(recipesWithDetails);
         } catch (error) {
             console.error('Error loading recipes:', error);
             toast({
