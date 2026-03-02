@@ -1,17 +1,19 @@
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3?target=deno';
-
-// Allowed origins for CORS (security improvement)
+// Allowed origins for CORS - includes localhost ports and production domain
 const ALLOWED_ORIGINS = [
-  'https://your-production-domain.com', // Replace with your actual domain
+  'https://caloriewise.finvestech.in', // Production domain
+  'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
 
 const getCorsHeaders = (origin: string | null) => {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
-    ? origin
-    : ALLOWED_ORIGINS[1]; // Default to localhost for dev
+  // Check if origin is in allowed list, or allow any localhost for development
+  const isLocalhost = origin?.startsWith('http://localhost:');
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isLocalhost);
+  
+  const allowedOrigin = isAllowed && origin ? origin : ALLOWED_ORIGINS[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
@@ -19,8 +21,6 @@ const getCorsHeaders = (origin: string | null) => {
     'Access-Control-Allow-Credentials': 'true',
   };
 };
-
-const corsHeaders = getCorsHeaders(null); // Default headers
 
 // Advanced system prompt for Gemini 2.5 Flash
 const ANALYZER_SYSTEM_PROMPT = `You are an expert nutritionist and computer vision specialist with advanced training in food recognition, portion estimation, and nutritional analysis. Your task is to analyze food images with exceptional accuracy by considering:
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
           error: 'No active Gemini API keys configured. Please add API keys in the admin panel.',
           details: 'Contact administrator to add Gemini API keys for meal scanning.'
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
           details: lastError?.message,
           keysAttempted: apiKeys.length
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -442,7 +442,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(responseWithMetadata),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -452,7 +452,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Failed to analyze nutrition',
         type: 'server_error'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...requestCorsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
