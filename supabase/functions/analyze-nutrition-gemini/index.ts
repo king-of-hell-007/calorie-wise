@@ -94,7 +94,7 @@ serve(async (req) => {
 
         // Call Gemini API with vision
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey.key_value}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey.key_value}`,
           {
             method: 'POST',
             headers: {

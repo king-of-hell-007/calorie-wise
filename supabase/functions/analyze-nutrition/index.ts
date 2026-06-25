@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
 
         try {
           const geminiResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`,
             {
               method: 'POST',
               signal: controller.signal,
@@ -371,7 +371,43 @@ Deno.serve(async (req) => {
             cleanedText = cleanedText.replace(/```\n?/g, '');
           }
 
-          analysisResult = JSON.parse(cleanedText);
+          try {
+            analysisResult = JSON.parse(cleanedText);
+            console.log('[PARSING] Successfully parsed JSON');
+          } catch (e) {
+            console.log(`[PARSING ERROR] Initial parse failed. Applying enhanced sanitization.`);
+
+            // Enhanced JSON Sanitization
+            cleanedText = cleanedText
+              // Removes // comments and /* */ blocks (ignoring http:// or https://)
+              .replace(/(?<!https?:)\/\/.*$/gm, '')
+              .replace(/\/\*[\s\S]*?\*\//g, '')
+              // Removes problematic newlines and carriage returns
+              .replace(/\n/g, ' ')
+              .replace(/\r/g, '')
+              // Fixes: {"key": "value",} → {"key": "value"}
+              .replace(/,(\s*[}\]])/g, '$1');
+
+            console.log(`[PARSING] Raw response length: ${generatedText.length} characters`);
+            console.log(`[PARSING] Cleaned text preview: ${cleanedText.substring(0, 200)}...`);
+
+            try {
+              analysisResult = JSON.parse(cleanedText);
+              console.log('[PARSING] Successfully parsed JSON after cleaning');
+            } catch (e2) {
+              console.error(`[PARSING ERROR] Problematic JSON (first 500 chars):`, cleanedText.substring(0, 500));
+              console.log('[PARSING] Attempting regex extraction fallback');
+
+              // If parsing fails, extract JSON object using regex
+              const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                analysisResult = JSON.parse(jsonMatch[0]);
+                console.log('[PARSING] Successfully parsed JSON using regex fallback');
+              } else {
+                throw new Error('Failed to extract valid JSON from response');
+              }
+            }
+          }
 
           // Update successful usage stats
           await supabaseAdmin
