@@ -175,12 +175,26 @@ export default function Analytics() {
             fat: profile?.fat_g ? Math.round((avgDailyFat / profile.fat_g) * 100) : 0
         };
 
+        // Compute streak history (mock visualization based on trendData)
+        let currentStreak = 0;
+        const streakHistory = trendData.map(day => {
+            if (day.meals > 0) {
+                currentStreak++;
+            } else {
+                currentStreak = 0;
+            }
+            return {
+                date: day.date,
+                streak: currentStreak
+            };
+        });
+
         return {
             weeklyTrend: timeRange === 'week' ? trendData : [],
             monthlyTrend: timeRange === 'month' ? trendData : [],
             macroDistribution,
             mealDistribution,
-            streakHistory: [], // TODO: Implement streak history
+            streakHistory,
             topFoods,
             goalProgress
         };

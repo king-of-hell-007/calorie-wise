@@ -295,11 +295,25 @@ export default function Friends() {
                 if (searchTerm.includes('@')) {
                     // This is an email invite for someone not on the platform yet
                     console.log('[Friend Search] User not found, sending invite...');
-                    toast({
-                        title: 'Invite sent!',
-                        description: `An invitation has been sent to ${searchEmail}. You'll get 50 bonus points when they join!`
-                    });
-                    // TODO: Implement actual email sending via edge function
+                    try {
+                        const { error } = await supabase.functions.invoke('send-invite-email', {
+                            body: { email: searchEmail }
+                        });
+                        if (error) throw error;
+
+                        toast({
+                            title: 'Invite sent!',
+                            description: `An invitation has been sent to ${searchEmail}. You'll get 50 bonus points when they join!`
+                        });
+                    } catch (e) {
+                        console.error('Failed to send email:', e);
+                        toast({
+                            title: 'Error',
+                            description: 'Failed to send invite email.',
+                            variant: 'destructive'
+                        });
+                    }
+
                     setSearchEmail('');
                     return;
                 } else {
