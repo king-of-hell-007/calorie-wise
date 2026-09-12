@@ -189,7 +189,7 @@ serve(async (req) => {
           })
           .eq('id', apiKey.id)
 
-        lastError = error.message
+        lastError = error instanceof Error ? error.message : String(error)
         continue
       }
     }
@@ -207,7 +207,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in analyze-nutrition-gemini:', error)
     return new Response(
-      JSON.stringify({ error: 'Failed to analyze nutrition', details: error.message }), 
+      JSON.stringify({ error: 'Failed to analyze nutrition', details: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

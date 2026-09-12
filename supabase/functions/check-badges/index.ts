@@ -55,6 +55,15 @@ serve(async (req) => {
     const unlockedBadgeIds = new Set(userBadges?.map(ub => ub.badge_id) || [])
     const newlyUnlocked: any[] = []
 
+    // Lazy load caches
+    let cachedMealCount: number | null = null;
+    let cachedProfile: any = null;
+    let cachedMealsToday: any[] | null = null;
+
+    let totalPointsAwarded = 0;
+    const pointsHistoryToInsert: any[] = [];
+    const badgesToInsert: any[] = [];
+
     // Check each badge
     for (const badge of badges || []) {
       if (unlockedBadgeIds.has(badge.id)) continue
@@ -64,98 +73,110 @@ serve(async (req) => {
 
       try {
         if (rule.type === 'meal_count') {
-          const { count } = await supabase
-            .from('meal_entries')
-            .select('id', { count: 'exact' })
-            .eq('user_id', userId)
-          
-          shouldUnlock = (count || 0) >= rule.count
+          if (cachedMealCount === null) {
+            const { count } = await supabase
+              .from('meal_entries')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', userId)
+            cachedMealCount = count || 0;
+          }
+          shouldUnlock = cachedMealCount >= rule.count
         }
 
         if (rule.type === 'streak') {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('current_streak_days')
-            .eq('id', userId)
-            .single()
-          
-          shouldUnlock = (profile?.current_streak_days || 0) >= rule.days
+          if (cachedProfile === null) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('current_streak_days, protein_g, carbs_g, fat_g, total_points')
+              .eq('id', userId)
+              .single()
+            cachedProfile = profile;
+          }
+          shouldUnlock = (cachedProfile?.current_streak_days || 0) >= rule.days
         }
 
         if (rule.type === 'daily_macro') {
           const today = new Date().toISOString().split('T')[0]
           
-          const { data: meals } = await supabase
-            .from('meal_entries')
-            .select('total_protein, total_carbs, total_fat')
-            .eq('user_id', userId)
-            .gte('created_at', `${today}T00:00:00`)
-            .lte('created_at', `${today}T23:59:59`)
+          if (cachedMealsToday === null) {
+            const { data: meals } = await supabase
+              .from('meal_entries')
+              .select('total_protein, total_carbs, total_fat')
+              .eq('user_id', userId)
+              .gte('created_at', `${today}T00:00:00`)
+              .lte('created_at', `${today}T23:59:59`)
+            cachedMealsToday = meals || [];
+          }
 
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('protein_g, carbs_g, fat_g')
-            .eq('id', userId)
-            .single()
+          if (cachedProfile === null) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('current_streak_days, protein_g, carbs_g, fat_g, total_points')
+              .eq('id', userId)
+              .single()
+            cachedProfile = profile;
+          }
 
-          if (meals && profile) {
-            const totalProtein = meals.reduce((sum, m) => sum + (m.total_protein || 0), 0)
-            const totalCarbs = meals.reduce((sum, m) => sum + (m.total_carbs || 0), 0)
-            const totalFat = meals.reduce((sum, m) => sum + (m.total_fat || 0), 0)
+          if (cachedMealsToday && cachedProfile) {
+            const totalProtein = cachedMealsToday.reduce((sum, m) => sum + (m.total_protein || 0), 0)
+            const totalCarbs = cachedMealsToday.reduce((sum, m) => sum + (m.total_carbs || 0), 0)
+            const totalFat = cachedMealsToday.reduce((sum, m) => sum + (m.total_fat || 0), 0)
 
             if (rule.macro === 'protein') {
-              shouldUnlock = totalProtein >= (profile.protein_g || 0)
+              shouldUnlock = totalProtein >= (cachedProfile.protein_g || 0)
             }
             if (rule.macro === 'carbs') {
-              shouldUnlock = totalCarbs >= (profile.carbs_g || 0)
+              shouldUnlock = totalCarbs >= (cachedProfile.carbs_g || 0)
             }
             if (rule.macro === 'fat') {
-              shouldUnlock = totalFat >= (profile.fat_g || 0)
+              shouldUnlock = totalFat >= (cachedProfile.fat_g || 0)
             }
           }
         }
 
         if (shouldUnlock) {
-          // Unlock the badge
-          const { error: insertError } = await supabase
-            .from('user_badges')
-            .insert({
-              user_id: userId,
-              badge_id: badge.id
-            })
+          badgesToInsert.push({ user_id: userId, badge_id: badge.id });
+          pointsHistoryToInsert.push({
+            user_id: userId,
+            points: badge.points,
+            reason: `Unlocked badge: ${badge.name}`
+          });
+          totalPointsAwarded += badge.points;
 
-          if (!insertError) {
-            // Award points
-            await supabase.from('points_history').insert({
-              user_id: userId,
-              points: badge.points,
-              reason: `Unlocked badge: ${badge.name}`
-            })
-
-            // Update total points
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('total_points')
-              .eq('id', userId)
-              .single()
-
-            if (profile) {
-              await supabase
-                .from('profiles')
-                .update({ total_points: (profile.total_points || 0) + badge.points })
-                .eq('id', userId)
-            }
-
-            newlyUnlocked.push({
-              id: badge.id,
-              name: badge.name,
-              points: badge.points,
-              icon: badge.icon
-            })
-          }
+          newlyUnlocked.push({
+            id: badge.id,
+            name: badge.name,
+            points: badge.points,
+            icon: badge.icon
+          })
         }
       } catch (error) {
         console.error('Error checking badge:', badge.name, error)
+      }
+    }
+
+    // Perform batch inserts/updates if any badges were unlocked
+    if (newlyUnlocked.length > 0) {
+      const { error: batchInsertError } = await supabase.from('user_badges').insert(badgesToInsert);
+
+      if (!batchInsertError) {
+        await supabase.from('points_history').insert(pointsHistoryToInsert);
+
+        if (cachedProfile === null) {
+           const { data: profile } = await supabase
+             .from('profiles')
+             .select('current_streak_days, protein_g, carbs_g, fat_g, total_points')
+             .eq('id', userId)
+             .single()
+           cachedProfile = profile;
+        }
+
+        if (cachedProfile) {
+           await supabase
+             .from('profiles')
+             .update({ total_points: (cachedProfile.total_points || 0) + totalPointsAwarded })
+             .eq('id', userId)
+        }
       }
     }
 
